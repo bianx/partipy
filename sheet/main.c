@@ -155,7 +155,6 @@ main(int argc, char **argv)
     t = 0;
     for (i = 0; i < M; i++) {
         ti = dt * i;
-        fprintf(stderr, "%s: %g\n", me, ti);
         if (gsl_odeiv2_driver_apply(driver, &t, ti, z) != GSL_SUCCESS) {
             fprintf(stderr, "%s: driver failed\n", me);
             exit(2);
@@ -163,7 +162,7 @@ main(int argc, char **argv)
         if (i > 0)
             printf("\n");
         for (j = 0; j < n; j++)
-            printf("%.16g %.16g\n", x[j], y[j]);
+            printf("%.16e %.16e\n", x[j], y[j]);
     }
     free(z);
     gsl_odeiv2_driver_free(driver);

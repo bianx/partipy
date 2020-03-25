@@ -3,14 +3,42 @@
 import scipy.integrate
 import numpy
 import math
+import sys
 
-n = 100
-eps = 0.5
 M = 10
 L = 1
 t1 = 4.0
+me = "sheet/main.py"
 
-def f(z, t):
+eps = n = None
+while True:
+    sys.argv.pop(0)
+    if len(sys.argv) == 0 or len(sys.argv[0]) < 2 or sys.argv[0][0] != '-':
+        break
+    if sys.argv[0][1] == 'n':
+        sys.argv.pop(0)
+        if len(sys.argv) == 0:
+            sys.stderr.write("%s: -n need an argument\n" % me)
+            sys.exit(2)
+        n = int(sys.argv[0])
+    elif sys.argv[0][1] == 'e':
+        sys.argv.pop(0)
+        if len(sys.argv) == 0:
+            sys.stderr.write("%s: -e need an argument\n" % me)
+            sys.exit(2)
+        eps = float(sys.argv[0])
+    else:
+        sys.stderr.write("%s: unknown option '%s'\n" % (me, sys.argv[0]))
+        sys.exit(2)
+
+if n == None:
+    sys.stderr.write("%s: -n is not set\n" % me)
+    sys.exit(2)
+if eps == None:
+    sys.stderr.write("%s: -e is not set\n" % me)
+    sys.exit(2)
+
+def func(z, t):
     cos = math.cos
     sin = math.sin
     cosh = math.cosh
@@ -36,7 +64,7 @@ x = x0 + 0.01 * numpy.sin(2 * math.pi * x0)
 y = -0.01 * numpy.sin(2 * math.pi * x0)
 z0 = numpy.hstack((x, y))
 t = numpy.linspace(0, t1, M)
-z, info = scipy.integrate.odeint(f, z0, t, full_output=True)
+z, info = scipy.integrate.odeint(func, z0, t, full_output=True)
 x = z[:, :n]
 y = z[:, n:]
 
@@ -44,4 +72,4 @@ for t in range(M):
     if t > 0:
         print("")
     for i in range(n):
-        print(x[t, i], y[t, i])
+        print("%.16e %.16e" % (x[t, i], y[t, i]))
