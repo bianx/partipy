@@ -1,4 +1,7 @@
-# partipy
-particle methods in python
+# Intro
 
-this is to start
+# Install
+
+Requires gsl.
+
+    make

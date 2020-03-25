@@ -6,7 +6,7 @@ import math
 
 N = 400
 M = 100
-L = 0.5
+L = 2
 t1 = 4.0
 eps = 0.1
 
