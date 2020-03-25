@@ -3,7 +3,7 @@
 .PHONY: clean lint
 
 CC = c99
-CFLAGS = -g -Og
+CFLAGS = -g -Ofast
 LINK = $(CC)
 M = \
 main\
