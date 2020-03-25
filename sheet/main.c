@@ -1,17 +1,25 @@
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_odeiv2.h>
+
+
 
 static char me[] = "sheet/main";
 static void
 usg(void)
 {
-    fprintf(stderr, "%s -n int > out\n", me);
+    fprintf(stderr, "%s -n N -e eps -s [rk2 rk4 rk8pd rkck rkf45] > out\n", me);
     exit(1);
 }
 
+struct Param {
+    int n;
+    double eps;
+};
+enum { SIZE = 999 };
 enum { M = 10 };
 static const double pi = 3.141592653589793;
 static const double L = 1.0;
@@ -19,9 +27,20 @@ static const double t1 = 4.0;
 static const double epsrel = 1e-6;
 static const double epsabs = 0;
 
-struct Param {
-    int n;
-    double eps;
+static const gsl_odeiv2_step_type **Type[] = {
+    &gsl_odeiv2_step_rk2,
+    &gsl_odeiv2_step_rk4,
+    &gsl_odeiv2_step_rk8pd,
+    &gsl_odeiv2_step_rkck,
+    &gsl_odeiv2_step_rkf45,
+};
+
+static const char *Name[] = {
+    "rk2",
+    "rk4",
+    "rk8pd",
+    "rkck",
+    "rkf47",
 };
 
 int
@@ -88,7 +107,7 @@ main(int argc, char **argv)
     struct Param param;
     int Nflag;
     int Eflag;
-
+    const char *scheme = "rk4";
     Nflag = Eflag = 0;
     while (*++argv != NULL && argv[0][0] == '-')
         switch (argv[0][1]) {
@@ -112,6 +131,14 @@ main(int argc, char **argv)
             }
             eps = atof(argv[0]);
             Eflag = 1;
+            break;
+        case 's':
+            argv++;
+            if (argv[0] == NULL) {
+                fprintf(stderr, "%s: -s needs an argument\n", me);
+                exit(2);
+            }
+            scheme = argv[0];
             break;	    
         default:
             fprintf(stderr, "%s: unknown option '%s'\n", me, argv[0]);
@@ -127,8 +154,8 @@ main(int argc, char **argv)
     }
     z = malloc(2 * n * sizeof(*z));
     if (z == NULL) {
-      fprintf(stderr, "%s: malloc failed\n", me);
-      exit(2);
+        fprintf(stderr, "%s: malloc failed\n", me);
+        exit(2);
     }
     param.n = n;
     param.eps = eps;
@@ -137,11 +164,21 @@ main(int argc, char **argv)
     sys.jacobian = NULL;
     sys.dimension = 2 * n;
     sys.params = &param;
-    driver = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk4,
-                                           dt_start, epsrel, epsabs);
-    if (driver == NULL) {
-      fprintf(stderr, "%s: driver allocation failed\n", me);
-      exit(2);
+
+    for (i = 0; ; i++) {
+      if (i == sizeof(Type)/sizeof(*Type)) {
+	fprintf(stderr, "%s: unknown scheme '%s'\n", me, scheme);
+	exit(2);
+      }
+      if (strncmp(scheme, Name[i], SIZE) == 0) {
+	driver = gsl_odeiv2_driver_alloc_y_new(&sys, *Type[i],
+					       dt_start, epsrel, epsabs);
+	if (driver == NULL) {
+	  fprintf(stderr, "%s: driver allocation failed\n", me);
+	  exit(2);
+	}
+	break;
+      }
     }
     x = z;
     y = &z[n];
