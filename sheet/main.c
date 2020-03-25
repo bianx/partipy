@@ -139,6 +139,10 @@ main(int argc, char **argv)
     sys.params = &param;
     driver = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk4,
                                            dt_start, epsrel, epsabs);
+    if (driver == NULL) {
+      fprintf(stderr, "%s: driver allocation failed\n", me);
+      exit(2);
+    }
     x = z;
     y = &z[n];
     h = L / (n - 1);
@@ -163,5 +167,4 @@ main(int argc, char **argv)
     }
     free(z);
     gsl_odeiv2_driver_free(driver);
-    return 0;
 }
