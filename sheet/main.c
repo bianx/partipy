@@ -5,8 +5,6 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_odeiv2.h>
 
-
-
 static char me[] = "sheet/main";
 static void
 usg(void)
@@ -40,7 +38,7 @@ static const char *Name[] = {
     "rk4",
     "rk8pd",
     "rkck",
-    "rkf47",
+    "rkf45",
 };
 
 int
