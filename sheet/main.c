@@ -127,7 +127,7 @@ main(int argc, char **argv)
     }
     z = malloc(2 * n * sizeof(*z));
     if (z == NULL) {
-      fprintf(stderr, "malloc failed\n", me);
+      fprintf(stderr, "%s: malloc failed\n", me);
       exit(2);
     }
     param.n = n;
