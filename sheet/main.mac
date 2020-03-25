@@ -1,0 +1,5 @@
+b(e)::=buildq([e], block([dy: y[i] - y[j], dx: x[i]  - x[j]], e));
+
+den: b(cosh(2*%pi*dy) - cos(2*%pi*dx) + e^2);
+f: b(sinh(2*%pi*dy)/den);
+g: b(sin(2*%pi*dx)/den);
