@@ -4,7 +4,7 @@ import scipy.integrate
 import numpy
 import math
 
-n = 10
+n = 100
 eps = 0.5
 M = 10
 L = 1
@@ -35,8 +35,7 @@ x0 = numpy.linspace(0, L, n)
 x = x0 + 0.01 * numpy.sin(2 * math.pi * x0)
 y = -0.01 * numpy.sin(2 * math.pi * x0)
 z0 = numpy.hstack((x, y))
-t0 = 0
-t = numpy.linspace(t0, t1, M)
+t = numpy.linspace(0, t1, M)
 z, info = scipy.integrate.odeint(f, z0, t, full_output=True)
 x = z[:, :n]
 y = z[:, n:]
