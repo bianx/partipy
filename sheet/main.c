@@ -9,7 +9,7 @@ static char me[] = "sheet/main";
 static void
 usg(void)
 {
-    fprintf(stderr, "%s -n N -e eps -s [rk2 rk4 rk8pd rkck rkf45] -o [punto|skel] > out\n", me);
+    fprintf(stderr, "%s -m M -n N -e eps -s [rk2 rk4 rk8pd rkck rkf45] -o [punto|skel] > out\n", me);
     exit(1);
 }
 static int func(double, const double*, double*, void *);
@@ -21,7 +21,6 @@ struct Param {
     double eps;
 };
 enum { SIZE = 999 };
-enum { M = 10 };
 static const double pi = 3.141592653589793;
 static const double L = 1.0;
 static const double t1 = 4.0;
@@ -58,27 +57,29 @@ int
 main(int argc, char **argv)
 {
     (void) argc;
-    int i;
-    double t;
-    int n;
-    double *z;
-    double *x;
-    double *y;
-    double h;
-    double ti;
-    double dt;
-    double x0;
-    double eps;
-    gsl_odeiv2_driver *driver;
-    double dt_start;
-    gsl_odeiv2_system sys;
-    struct Param param;
-    int Nflag;
-    int Eflag;
     const char *scheme = "rk4";
+    double dt;
+    double dt_start;
+    double eps;
+    double h;
+    double t;
+    double ti;
+    double *x;
+    double x0;
+    double *y;
+    double *z;
+    gsl_odeiv2_driver *driver;
+    gsl_odeiv2_system sys;
+    int Eflag;
+    int i;
+    int m;
+    int Mflag;
+    int n;
+    int Nflag;
     int (*write)(int, const double*, const double*, int);
+    struct Param param;
 
-    Nflag = Eflag = 0;
+    Nflag = Eflag = Mflag = 0;
     write = NULL;
     while (*++argv != NULL && argv[0][0] == '-')
 	switch (argv[0][1]) {
@@ -94,6 +95,15 @@ main(int argc, char **argv)
 	    n = atoi(argv[0]);
 	    Nflag = 1;
 	    break;
+	case 'm':
+	    argv++;
+	    if (argv[0] == NULL) {
+		fprintf(stderr, "%s: -m needs an argument\n", me);
+		exit(2);
+	    }
+	    m = atoi(argv[0]);
+	    Mflag = 1;
+	    break;	    
 	case 'e':
 	    argv++;
 	    if (argv[0] == NULL) {
@@ -136,6 +146,10 @@ main(int argc, char **argv)
 	fprintf(stderr, "%s: -n is not given\n", me);
 	exit(2);
     }
+    if (Mflag == 0) {
+	fprintf(stderr, "%s: -m is not given\n", me);
+	exit(2);
+    }    
     if (Eflag == 0) {
 	fprintf(stderr, "%s: -e is not given\n", me);
 	exit(2);
@@ -180,9 +194,9 @@ main(int argc, char **argv)
 	x[i] = x0 + 0.01 * sin(2 * pi * x0);
 	y[i] = -0.01 * sin(2 * pi * x0);
     }
-    dt = t1 / (M - 1);
+    dt = t1 / (m - 1);
     t = 0;
-    for (i = 0; i < M; i++) {
+    for (i = 0; i < m; i++) {
 	ti = dt * i;
 	if (gsl_odeiv2_driver_apply(driver, &t, ti, z) != GSL_SUCCESS) {
 	    fprintf(stderr, "%s: driver failed\n", me);
