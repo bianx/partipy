@@ -13,4 +13,8 @@ set output output
 print "write: ", output
 plot "$i" w l lw 4, "" u (\$1+1):2 w p ps 1 pt 7
 !
+if test $? -ne 0
+then echo >&2 "gnuplot failed"
+     exit 2
+fi
 done
