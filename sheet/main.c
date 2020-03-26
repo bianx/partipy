@@ -310,7 +310,7 @@ skel_write(int n, const double *x, const double *y, int step)
 static int
 off_write(int n, const double *x, const double *y, int step)
 {
-#   define NTRI (5)
+#   define NTRI (50)
     char path[SIZE];
     double u[NTRI];
     double v[NTRI];
@@ -321,16 +321,14 @@ off_write(int n, const double *x, const double *y, int step)
     int j;
     int k;
     int m;
-    int npolylines;
     static const double pi = 3.141592653589793;
+    static const double r = 0.0005;
     m = NTRI;
     h = 2 * pi / m;
     for (i = 0; i < m; i++) {
-      u[i] = cos(i * h);
-      v[i] = sin(i * h);
+      u[i] = r * cos(i * h);
+      v[i] = r * sin(i * h);
     }
-
-    npolylines = 1;
     z = 0;
     snprintf(path, SIZE, "%05d.off", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
@@ -351,7 +349,7 @@ off_write(int n, const double *x, const double *y, int step)
     for (i = 0; i < n; i++) {
       k = (m + 1) * i;
       for (j = 0; j < m - 1; j++)
-	fprintf(f, "3 %d %d %d\n", k, k + j, k + j + 1);
+	fprintf(f, "3 %d %d %d\n", k, k + j + 1, k + j + 2);
       fprintf(f, "3 %d %d %d\n", k, k + m, k + 1);
     }
     if (fclose(f) != 0) {
