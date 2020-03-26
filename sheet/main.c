@@ -9,7 +9,7 @@ static char me[] = "sheet/main";
 static void
 usg(void)
 {
-    fprintf(stderr, "%s -m M -n N -e eps -s [rk2 rk4 rk8pd rkck rkf45] -o [punto|skel] > out\n", me);
+    fprintf(stderr, "%s -n N -e eps -s [rk2 rk4 rk8pd rkck rkf45] -o [punto|skel] [> punto]\n", me);
     exit(1);
 }
 static int func(double, const double*, double*, void *);
