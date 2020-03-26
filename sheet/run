@@ -1,0 +1,5 @@
+#!/bin/sh
+
+for i in rk2 rk4 rk8pd rkck rkf45
+do ./main -s $i -n 100 -e 0.5 > $i
+done
