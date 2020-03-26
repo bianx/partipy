@@ -18,6 +18,8 @@ static const double L = 1.0;
 static const double t1 = 4.0;
 static const double epsrel = 1e-6;
 static const double epsabs = 0;
+double Ham[M+1];
+int iH=0;
 
 struct Param {
     int n;
@@ -49,9 +51,10 @@ func(double t, const double *z, double *f, void *params0)
     y = &z[n];
     fx = f;
     fy = &f[n];
+
     for (i = 0; i < n; i++)
         fx[i] = fy[i] = 0;
-    for (i = 0; i < n; i++)
+    for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++)
             if (i != j) {
                 dx = x[i] - x[j];
@@ -59,12 +62,54 @@ func(double t, const double *z, double *f, void *params0)
                 den = cosh(2 * pi * dy) - cos(2 * pi * dx) + eps * eps;
                 fx[i] -= sinh(2 * pi * dy) / den;
                 fy[i] += sin(2 * pi * dx) / den;
-            }
+       }
+    }
+    
     for (i = 0; i < n; i++) {
         fx[i] /= 2 * n;
         fy[i] /= 2 * n;
     }
     return GSL_SUCCESS;
+}
+
+int
+post(const double *z, void *params0)
+{
+    const double *x;
+    const double *y;
+    double dx;
+    double dy;
+    double den;
+    double eps;
+    int i;
+    int j;
+    int n;
+    struct Param *params;
+
+    double Ht;
+    
+    params = params0;
+    n = params->n;
+    eps = params->eps;
+    x = z;
+    y = &z[n];
+
+    Ht=0;
+    
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++)
+            if (i != j) {
+                dx = x[i] - x[j];
+                dy = y[i] - y[j];
+                den = cosh(2 * pi * dy) - cos(2 * pi * dx) + eps * eps;
+		if ( j > i ) {
+		  Ht += log(den);
+		}
+       }
+    }
+    Ham[iH++]= -Ht/4/pi/n/n;
+
+    return 1;
 }
 
 int
@@ -163,7 +208,7 @@ main(int argc, char **argv)
     }
     x = z;
     y = &z[n];
-    h = L / (n - 1);
+    h = L / n ;
     for (i = 0; i < n; i++) {
         x0 = i * h;
         x[i] = x0 + 0.01 * sin(2 * pi * x0);
@@ -174,15 +219,28 @@ main(int argc, char **argv)
     for (i = 0; i <= M; i++) {
         ti = dt_out * i;
         fprintf(stderr, "%s: %g\n", me, ti);
-        if (gsl_odeiv2_driver_apply(driver, &t, ti, z) != GSL_SUCCESS) {
+
+	if ( post(z, &param) != 1 ) {
+	  fprintf(stderr, "%s: post failed\n", me);
+            exit(2);
+	}
+
+	if (gsl_odeiv2_driver_apply(driver, &t, ti, z) != GSL_SUCCESS) {
             fprintf(stderr, "%s: driver failed\n", me);
             exit(2);
         }
+
         if (i > 0)
             printf("\n");
 	//printf ("#t=%.5g\n", ti);
         for (j = 0; j < n; j++)
             printf("%.16g %.16g\n", x[j], y[j]);
+    }
+
+    printf("This is H\n");
+    for (i = 0; i<=M; i++) {
+      ti = dt_out * i;
+      printf("%.5g %.16g\n", ti, Ham[i]);
     }
     free(z);
     gsl_odeiv2_driver_free(driver);
