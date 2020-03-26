@@ -1,0 +1,16 @@
+#!/bin/sh
+
+for i
+do  b=`basename "$i" .dat`
+    gnuplot <<!
+set term pngcairo noenhanced mono size 1200, 500
+set key off
+set xrange [0:2]
+set yrange [-0.275:0.275]
+set xtics 0, 1, 2
+output = "$b.png"
+set output output
+print "write: ", output
+plot "$i" w l lw 4, "" u (\$1+1):2 w p ps 1 pt 7
+!
+done
