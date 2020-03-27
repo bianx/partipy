@@ -109,7 +109,7 @@ post(const double *z, void *params0)
     }
     Ham[iH++]= -Ht/4/pi/n/n;
 
-    return 1;
+    return 0;
 }
 
 int
@@ -220,7 +220,7 @@ main(int argc, char **argv)
         ti = dt_out * i;
         fprintf(stderr, "%s: %g\n", me, ti);
 
-	if ( post(z, &param) != 1 ) {
+	if ( post(z, &param) != 0 ) {
 	  fprintf(stderr, "%s: post failed\n", me);
             exit(2);
 	}
