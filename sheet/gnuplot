@@ -1,13 +1,38 @@
 #!/bin/sh
 
+
+border1 () {
+    cat <<!
+set xtics 0, 1, 2
+!
+}
+
+border2 () {
+    cat <<!
+unset border
+unset xtics
+unset ytics
+!
+}
+
+border=border1
+while test $# -ne 0
+do case "$1" in
+       -b) shift
+	   border=border2
+	   ;;
+       *) break
+   esac
+done
+
 for i
 do  b=`basename "$i" .dat`
     gnuplot <<!
-set term pngcairo noenhanced mono size 1200, 500
+set term pngcairo noenhanced mono size 1200, 300
 set key off
 set xrange [0:2]
 set yrange [-0.275:0.275]
-set xtics 0, 1, 2
+`$border`
 output = "$b.png"
 set output output
 print "write: ", output
