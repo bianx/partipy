@@ -7,10 +7,10 @@ t1=4
 M=20
 dt=4.0/20
 
-t=0
+t=4
 
-n=1600
-eps="025"
+n=400
+eps="05"
 
 round(x) = x - floor(x) < 0.5 ? floor(x) : ceil(x)
 

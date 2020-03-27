@@ -19,7 +19,11 @@ static const double t1 = 4.0;
 static const double epsrel = 1e-6;
 static const double epsabs = 0;
 double Ham[M+1];
+double MomX[M+1];
+double MomY[M+1];
+double MomAz[M+1];
 int iH=0;
+
 
 struct Param {
     int n;
@@ -87,6 +91,8 @@ post(const double *z, void *params0)
     struct Param *params;
 
     double Ht;
+    double mx;
+    double my;
     
     params = params0;
     n = params->n;
@@ -95,17 +101,24 @@ post(const double *z, void *params0)
     y = &z[n];
 
     Ht=0;
-    
     for (i = 0; i < n; i++) {
-        for (j = 0; j < n; j++)
-            if (i != j) {
-                dx = x[i] - x[j];
-                dy = y[i] - y[j];
-                den = cosh(2 * pi * dy) - cos(2 * pi * dx) + eps * eps;
-		if ( j > i ) {
-		  Ht += log(den);
-		}
+      mx=0;
+      my=0;
+      for (j = 0; j < n; j++)
+	if (i != j) {
+	  dx = x[i] - x[j];
+	  dy = y[i] - y[j];
+	  den = cosh(2 * pi * dy) - cos(2 * pi * dx) + eps * eps;
+	  mx -= sinh(2 * pi * dy) / den;
+	  my += sin(2 * pi * dx) / den;
+	  if ( j > i ) {
+	    Ht += log(den);
+	  }
        }
+      MomX[iH]+=mx;
+      MomY[iH]+=my;
+      MomAz[iH]+=x[i]*my-y[i]*mx;
+      
     }
     Ham[iH++]= -Ht/4/pi/n/n;
 
@@ -237,10 +250,10 @@ main(int argc, char **argv)
             printf("%.16g %.16g\n", x[j], y[j]);
     }
 
-    printf("This is H\n");
+    printf("#This is Ham, MomX, MomY, MomAz\n");
     for (i = 0; i<=M; i++) {
       ti = dt_out * i;
-      printf("%.5g %.16g\n", ti, Ham[i]);
+      printf("%.5g %.16g %.16g %.16g %.16g\n", ti, Ham[i], MomX[i], MomY[i], MomAz[i]);
     }
     free(z);
     gsl_odeiv2_driver_free(driver);
