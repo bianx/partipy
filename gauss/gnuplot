@@ -28,15 +28,14 @@ done
 for i
 do  b=`basename "$i" .dat`
     gnuplot <<!
-set term pngcairo noenhanced mono size 1200, 300
+set term pngcairo noenhanced mono size 1200, 600
 set key off
-set yrange [-1:1]
-set xrange [-1.1:1.1]
 `$border`
 output = "$b.png"
 set output output
+set yrange [-0.01:0.01]
 print "write: ", output
-plot "$i" w lp lw 4
+plot "<tail -n 12 $i" w lp lw 4
 !
 if test $? -ne 0
 then echo >&2 "gnuplot failed"

@@ -12,8 +12,8 @@ static void
 usg(void)
 {
     fprintf(stderr,
-            "%s -t time -n N -m M -d delta -s [rk2 rk4 rk8pd rkck rkf45] -o [punto|skel|off] [> punto]\n",
-            me);
+	    "%s -t time -m M -d delta -s [rk2 rk4 rk8pd rkck rkf45] -o [punto|skel|off] [> punto]\n < initial",
+	    me);
     exit(1);
 }
 
@@ -38,7 +38,7 @@ struct Param {
 };
 
 enum { SIZE = 999 };
-static const double epsrel = 1e-6;
+static const double epsrel = 100;
 static const double epsabs = 0;
 
 static const gsl_odeiv2_step_type **Type[] = {
@@ -76,7 +76,7 @@ int
 main(int argc, char **argv)
 {
     (void) argc;
-    const char *scheme = "rk4";
+    const char *scheme;
     char line[SIZE];
     double t;
     double dt;
@@ -85,174 +85,180 @@ main(int argc, char **argv)
     double ti;
     double t1;
     double *x;
-    double x0;
     double *y;
     double *z;
+    double *buf;
     double *ksi;
     gsl_odeiv2_driver *driver;
     gsl_odeiv2_system sys;
-    int Eflag;
+    int Dflag;
     int i;
+    int j;
     int m;
     int Mflag;
     int n;
-    int Nflag;
+    int ncap;
     int Tflag;
     int (*write)(int, const double *, const double *, int);
     struct Param param;
     struct PsiParam psi_param;
 
-    Nflag = Eflag = Mflag = Tflag = 0;
+    Dflag = Mflag = Tflag = 0;
+    scheme = "rk4";
     write = NULL;
     while (*++argv != NULL && argv[0][0] == '-')
-        switch (argv[0][1]) {
-        case 'h':
-            usg();
-            break;
-        case 'n':
-            argv++;
-            if (argv[0] == NULL) {
-                fprintf(stderr, "%s: -n needs an argument\n", me);
-                exit(2);
-            }
-            n = atoi(argv[0]);
-            Nflag = 1;
-            break;
-        case 'm':
-            argv++;
-            if (argv[0] == NULL) {
-                fprintf(stderr, "%s: -m needs an argument\n", me);
-                exit(2);
-            }
-            m = atoi(argv[0]);
-            Mflag = 1;
-            break;
-        case 'd':
-            argv++;
-            if (argv[0] == NULL) {
-                fprintf(stderr, "%s: -d needs an argument\n", me);
-                exit(2);
-            }
-            delta = atof(argv[0]);
-            Eflag = 1;
-            break;
-        case 't':
-            argv++;
-            if (argv[0] == NULL) {
-                fprintf(stderr, "%s: -t needs an argument\n", me);
-                exit(2);
-            }
-            t1 = atof(argv[0]);
-            Tflag = 1;
-            break;	    
-        case 'o':
-            argv++;
-            if (argv[0] == NULL) {
-                fprintf(stderr, "%s: -o needs an argument\n", me);
-                exit(2);
-            }
-            for (i = 0;; i++) {
-                if (i == sizeof(WriteFun) / sizeof(*WriteFun)) {
-                    fprintf(stderr, "%s: unknown output type '%s'\n", me,
-                            argv[0]);
-                    exit(2);
-                }
-                if (strncmp(argv[0], WriteName[i], SIZE) == 0) {
-                    write = WriteFun[i];
-                    break;
-                }
-            }
-            break;
-        case 's':
-            argv++;
-            if (argv[0] == NULL) {
-                fprintf(stderr, "%s: -s needs an argument\n", me);
-                exit(2);
-            }
-            scheme = argv[0];
-            break;
-        default:
-            fprintf(stderr, "%s: unknown option '%s'\n", me, argv[0]);
-            exit(2);
-        }
-    if (Nflag == 0) {
-        fprintf(stderr, "%s: -n is not given\n", me);
-        exit(2);
-    }
+	switch (argv[0][1]) {
+	case 'h':
+	    usg();
+	    break;
+	case 'm':
+	    argv++;
+	    if (argv[0] == NULL) {
+		fprintf(stderr, "%s: -m needs an argument\n", me);
+		exit(2);
+	    }
+	    m = atoi(argv[0]);
+	    Mflag = 1;
+	    break;
+	case 'd':
+	    argv++;
+	    if (argv[0] == NULL) {
+		fprintf(stderr, "%s: -d needs an argument\n", me);
+		exit(2);
+	    }
+	    delta = atof(argv[0]);
+	    Dflag = 1;
+	    break;
+	case 't':
+	    argv++;
+	    if (argv[0] == NULL) {
+		fprintf(stderr, "%s: -t needs an argument\n", me);
+		exit(2);
+	    }
+	    t1 = atof(argv[0]);
+	    Tflag = 1;
+	    break;
+	case 'o':
+	    argv++;
+	    if (argv[0] == NULL) {
+		fprintf(stderr, "%s: -o needs an argument\n", me);
+		exit(2);
+	    }
+	    for (i = 0;; i++) {
+		if (i == sizeof(WriteFun) / sizeof(*WriteFun)) {
+		    fprintf(stderr, "%s: unknown output type '%s'\n", me,
+			    argv[0]);
+		    exit(2);
+		}
+		if (strncmp(argv[0], WriteName[i], SIZE) == 0) {
+		    write = WriteFun[i];
+		    break;
+		}
+	    }
+	    break;
+	case 's':
+	    argv++;
+	    if (argv[0] == NULL) {
+		fprintf(stderr, "%s: -s needs an argument\n", me);
+		exit(2);
+	    }
+	    scheme = argv[0];
+	    break;
+	default:
+	    fprintf(stderr, "%s: unknown option '%s'\n", me, argv[0]);
+	    exit(2);
+	}
     if (Mflag == 0) {
-        fprintf(stderr, "%s: -m is not given\n", me);
-        exit(2);
+	fprintf(stderr, "%s: -m is not given\n", me);
+	exit(2);
     }
     if (Tflag == 0) {
-        fprintf(stderr, "%s: -t is not given\n", me);
-        exit(2);
-    }    
-    if (Eflag == 0) {
-        fprintf(stderr, "%s: -e is not given\n", me);
-        exit(2);
+	fprintf(stderr, "%s: -t is not given\n", me);
+	exit(2);
+    }
+    if (Dflag == 0) {
+	fprintf(stderr, "%s: -d is not given\n", me);
+	exit(2);
     }
     if (write == NULL) {
-        fprintf(stderr, "%s: -o is not given\n", me);
-        exit(2);
+	fprintf(stderr, "%s: -o is not given\n", me);
+	exit(2);
     }
-    ksi = malloc(n * sizeof(*ksi));
-    if (ksi == NULL) {
+
+    ncap = 1;
+    if ((buf = malloc(ncap * sizeof(*buf))) == NULL) {
       fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
       exit(2);
     }
-    z = malloc(2 * n * sizeof(*z));
-    if (z == NULL) {
-      fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);      
+    n = 0;
+    while (fgets(line, SIZE, stdin) != NULL) {
+      while (ncap <= 3*n + 2) {
+	ncap *= 2;
+	if ((buf = realloc(buf, ncap * sizeof(*buf))) == NULL) {
+	  fprintf(stderr, "%s:%d: realloc failed\n", __FILE__, __LINE__);
+	  exit(2);
+	}
+      }
+      if (sscanf(line, "%lf %lf %lf", &buf[3*n], &buf[3*n+1], &buf[3*n+2]) != 3) {
+	fprintf(stderr, "%s: fail to parse '%s'\n", me, line);
+	exit(2);
+      }
+      n++;
+    }
+    if ((z = malloc(2 * n * sizeof(*z))) == NULL) {
+      fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+      exit(2);
+    }
+    if ((ksi = malloc(n * sizeof(*ksi))) == NULL) {
+      fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
       exit(2);
     }
     x = z;
     y = &z[n];
-    for (i = 0; i < n; i++) {
-      if (fgets(line, SIZE, stdin) == NULL) {
-	fprintf(stderr, "%s: failt to real i = %d\n", me, i);
-	exit(2);	
-      }
-      if (sscanf(line, "%lf %lf %lf", &x[i], &y[i], &ksi[i]) != 3) {
-	fprintf(stderr, "%s: fail to parse '%s'\n", me, line);
-	exit(2);
-      }
+    for (i = j = 0; i < n; i++) {
+      x[i] = buf[j++];
+      y[i] = buf[j++];
+      ksi[i] = buf[j++];
+      fprintf(stderr, "xyksi: %g %g %g\n", x[i], y[i], ksi[i]);
     }
+    
     psi_param.delta = delta;
     param.n = n;
     param.psi_param = &psi_param;
     param.ksi = ksi;
-    dt_start = 1e-6;
+    dt_start = 5e-5;
     sys.function = func;
     sys.jacobian = NULL;
     sys.dimension = 2 * n;
     sys.params = &param;
     for (i = 0;; i++) {
-        if (i == sizeof(Type) / sizeof(*Type)) {
-            fprintf(stderr, "%s: unknown scheme '%s'\n", me, scheme);
-            exit(2);
-        }
-        if (strncmp(scheme, Name[i], SIZE) == 0) {
-            driver = gsl_odeiv2_driver_alloc_y_new(&sys, *Type[i],
-                                                   dt_start, epsrel,
-                                                   epsabs);
-            if (driver == NULL) {
-                fprintf(stderr, "%s: driver allocation failed\n", me);
-                exit(2);
-            }
-            break;
-        }
+	if (i == sizeof(Type) / sizeof(*Type)) {
+	    fprintf(stderr, "%s: unknown scheme '%s'\n", me, scheme);
+	    exit(2);
+	}
+	if (strncmp(scheme, Name[i], SIZE) == 0) {
+	    driver = gsl_odeiv2_driver_alloc_y_new(&sys, *Type[i],
+						   dt_start, epsrel,
+						   epsabs);
+	    if (driver == NULL) {
+		fprintf(stderr, "%s: driver allocation failed\n", me);
+		exit(2);
+	    }
+	    break;
+	}
     }
     dt = t1 / (m - 1);
     t = 0;
     for (i = 0; i < m; i++) {
-        ti = dt * i;
-        if (gsl_odeiv2_driver_apply(driver, &t, ti, z) != GSL_SUCCESS) {
-            fprintf(stderr, "%s: driver failed\n", me);
-            exit(2);
-        }
-        write(n, x, y, i);
+	ti = dt * i;
+	if (gsl_odeiv2_driver_apply(driver, &t, ti, z) != GSL_SUCCESS) {
+	    fprintf(stderr, "%s: driver failed\n", me);
+	    exit(2);
+	}
+	write(n, x, y, i);
     }
     free(z);
+    free(buf);
     free(ksi);
     gsl_odeiv2_driver_free(driver);
 }
@@ -285,19 +291,19 @@ func(double t, const double *z, double *f, void *params0)
     fx = f;
     fy = &f[n];
     for (i = 0; i < n; i++)
-        fx[i] = fy[i] = 0;
+	fx[i] = fy[i] = 0;
     for (i = 0; i < n; i++)
-        for (j = 0; j < n; j++)
-            if (i != j) {
-                dx = x[i] - x[j];
-                dy = y[i] - y[j];
-                dpsi(dx, dy, &gx, &gy, psi_param);
-                fx[i] -= ksi[j] * gy;
-                fy[i] += ksi[j] * gx;
-            }
+	for (j = 0; j < n; j++)
+	    if (i != j) {
+		dx = x[i] - x[j];
+		dy = y[i] - y[j];
+		dpsi(dx, dy, &gx, &gy, psi_param);
+		fx[i] -= ksi[j] * gy;
+		fy[i] += ksi[j] * gx;
+	    }
     for (i = 0; i < n; i++) {
-        fx[i] *= dpsi_coef;
-        fy[i] *= dpsi_coef;
+	fx[i] *= dpsi_coef;
+	fy[i] *= dpsi_coef;
     }
     return GSL_SUCCESS;
 }
@@ -308,9 +314,9 @@ punto_write(int n, const double *x, const double *y, int step)
     int j;
 
     if (step > 0)
-        printf("\n");
+	printf("\n");
     for (j = 0; j < n; j++)
-        printf("%.16e %.16e\n", x[j], y[j]);
+	printf("%.16e %.16e\n", x[j], y[j]);
     return 0;
 }
 
@@ -328,24 +334,24 @@ skel_write(int n, const double *x, const double *y, int step)
     snprintf(path, SIZE, "%05d.skel", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
     if ((f = fopen(path, "w")) == NULL) {
-        fprintf(stderr, "%s: fail to open '%s'\n", me, path);
-        exit(2);
+	fprintf(stderr, "%s: fail to open '%s'\n", me, path);
+	exit(2);
     }
     if (fputs("SKEL\n", f) == EOF) {
-        fprintf(stderr, "%s: fail to write '%s'\n", me, path);
-        exit(2);
+	fprintf(stderr, "%s: fail to write '%s'\n", me, path);
+	exit(2);
     }
     fprintf(f, "%d %d\n", n, npolylines);
     for (i = 0; i < n; i++)
-        fprintf(f, "%.16g %.16g %.16g\n", x[i], y[i], z);
+	fprintf(f, "%.16g %.16g %.16g\n", x[i], y[i], z);
     fprintf(f, "%d", n);
     for (i = 0; i < n; i++)
-        fprintf(f, " %d", i);
+	fprintf(f, " %d", i);
     fprintf(f, "\n");
 
     if (fclose(f) != 0) {
-        fprintf(stderr, "%s: fail to close '%s'\n", me, path);
-        exit(2);
+	fprintf(stderr, "%s: fail to close '%s'\n", me, path);
+	exit(2);
     }
     return 0;
 }
@@ -369,35 +375,35 @@ off_write(int n, const double *x, const double *y, int step)
     m = NTRI;
     h = 2 * pi / m;
     for (i = 0; i < m; i++) {
-        u[i] = r * cos(i * h);
-        v[i] = r * sin(i * h);
+	u[i] = r * cos(i * h);
+	v[i] = r * sin(i * h);
     }
     z = 0;
     snprintf(path, SIZE, "%05d.off", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
     if ((f = fopen(path, "w")) == NULL) {
-        fprintf(stderr, "%s: fail to open '%s'\n", me, path);
-        exit(2);
+	fprintf(stderr, "%s: fail to open '%s'\n", me, path);
+	exit(2);
     }
     if (fputs("OFF\n", f) == EOF) {
-        fprintf(stderr, "%s: fail to write '%s'\n", me, path);
-        exit(2);
+	fprintf(stderr, "%s: fail to write '%s'\n", me, path);
+	exit(2);
     }
     fprintf(f, "%d %d 0\n", (1 + m) * n, m * n);
     for (i = 0; i < n; i++) {
-        fprintf(f, "%.16g %.16g %.16g\n", x[i], y[i], z);
-        for (j = 0; j < m; j++)
-            fprintf(f, "%.16g %.16g %.16g\n", x[i] + u[j], y[i] + v[j], z);
+	fprintf(f, "%.16g %.16g %.16g\n", x[i], y[i], z);
+	for (j = 0; j < m; j++)
+	    fprintf(f, "%.16g %.16g %.16g\n", x[i] + u[j], y[i] + v[j], z);
     }
     for (i = 0; i < n; i++) {
-        k = (m + 1) * i;
-        for (j = 0; j < m - 1; j++)
-            fprintf(f, "3 %d %d %d\n", k, k + j + 1, k + j + 2);
-        fprintf(f, "3 %d %d %d\n", k, k + m, k + 1);
+	k = (m + 1) * i;
+	for (j = 0; j < m - 1; j++)
+	    fprintf(f, "3 %d %d %d\n", k, k + j + 1, k + j + 2);
+	fprintf(f, "3 %d %d %d\n", k, k + m, k + 1);
     }
     if (fclose(f) != 0) {
-        fprintf(stderr, "%s: fail to close '%s'\n", me, path);
-        exit(2);
+	fprintf(stderr, "%s: fail to close '%s'\n", me, path);
+	exit(2);
     }
     return 0;
 }
@@ -412,14 +418,14 @@ gnuplot_write(int n, const double *x, const double *y, int step)
     snprintf(path, SIZE, "%05d.dat", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
     if ((f = fopen(path, "w")) == NULL) {
-        fprintf(stderr, "%s: fail to open '%s'\n", me, path);
-        exit(2);
+	fprintf(stderr, "%s: fail to open '%s'\n", me, path);
+	exit(2);
     }
     for (i = 0; i < n; i++)
-        fprintf(f, "%.16g %.16g\n", x[i], y[i]);
+	fprintf(f, "%.16g %.16g\n", x[i], y[i]);
     if (fclose(f) != 0) {
-        fprintf(stderr, "%s: fail to close '%s'\n", me, path);
-        exit(2);
+	fprintf(stderr, "%s: fail to close '%s'\n", me, path);
+	exit(2);
     }
     return 0;
 }
@@ -436,16 +442,16 @@ dpsi(double x, double y, double *u, double *v, void *p0)
     delta = p->delta;
     r2 = x * x + y * y;
     if (r2 > delta * delta) {
-        coef = 1 / r2;
-        *u = coef * x;
-        *v = coef * y;
+	coef = 1 / r2;
+	*u = coef * x;
+	*v = coef * y;
     } else if (r2 > 10 * DBL_MIN) {
-        coef = 1 / sqrt(r2) / delta;
-        *u = coef * x;
-        *v = coef * y;
+	coef = 1 / sqrt(r2) / delta;
+	*u = coef * x;
+	*v = coef * y;
     } else {
-        *u = 0;
-        *v = 0;
+	*u = 0;
+	*v = 0;
     }
     return 0;
 }

@@ -1,28 +1,18 @@
-load('to_poly_solve);
-depends(r, [x, y]);
+ksi: 2 * 'x / sqrt(1 - 'x^2);
+tot: integrate(ksi, 'x, -1, 0);
 
-r: sqrt(x^2 + y^2);
+assume(x > -1, x < 1, i > 0, n > 0);
+G(a, b):=integrate(ksi, 'x, a, b);
 
-psi0: log(r);
-psi1: r/delta;
-
-diff(psi0, x), expand;
-diff(psi1, x), expand;
-
-ksi: 2 * x / sqrt(1 - x^2);
-tot: integrate(ksi, x, -1, 0);
-
-assume(x > -1, x < 1, m > 0, n > 0);
-eq: integrate(ksi, x, -1, x) - m * tot / n;
+eq: G(-1, 'x) - i * tot / n;
 so: rhs(solve(eq, x)[2]);
-/* to_poly_solve(so, x); */
-define(f('m), so);
+define(f('n, 'i), so);
+F(n, i):= block([a: f(n, i), b: f(n, i + 1)],
+integrate(ksi * 'x, 'x, a, b) / integrate(ksi, 'x, a, b));
 
 n: 50;
-xx: [];
-for m: 0 thru n - 1 do
-  push((f(m) + f(m+1))/2, xx);
-
 with_stdout("o",
-for x in append(-reverse(xx), xx) do
-printf(true, "~,16e ~,16g ~,16g~%", x, 0, if x < 0 then tot/n else -tot/n));
+for i: 0 thru n - 1 do
+printf(true, "~,16e ~,16e ~,16e~%", -float(F(n, i)), 0, tot / n),
+for i: 0 thru n - 1 do
+printf(true, "~,16e ~,16e ~,16e~%", float(F(n, n - 1 - i)), 0, -tot / n));

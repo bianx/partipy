@@ -1,0 +1,9 @@
+assume(delta > 0);
+r: sqrt(x^2 + y^2);
+psi0: log(r);
+psi1: r/delta;
+
+d0: diff(psi0, x);
+d1: diff(psi1, x);
+
+[d0, d1], x = delta, y = 0;
