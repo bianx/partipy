@@ -33,7 +33,7 @@ set key off
 `$border`
 output = "$b.png"
 set output output
-set yrange [-0.001:0.008]
+set yrange [-0.0005:0.016]
 print "write: ", output
 plot "<tail -n 12 $i" w lp lw 4 pt 7 ps 3
 !
