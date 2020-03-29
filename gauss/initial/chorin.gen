@@ -1,0 +1,15 @@
+awk '
+BEGIN {
+    n = 50
+    h = 2 / n
+    ksi = 2 / n
+    for (i = 0; i < n; i++)
+	x[i] = sqrt(8*i*n+4*n-4*i^2-4*i-1)/(2*n)
+    
+    for (i = 0; i < n; i++) {
+	j = n - 1 - i
+	printf "%.16e %.16e %.16e\n", -x[j], 0, -ksi
+    }
+    for (i = 0; i < n; i++)
+	printf "%.16e %.16e %.16e\n", x[i], 0, ksi    
+}'

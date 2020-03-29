@@ -1,18 +1,18 @@
-ksi: 2 * 'x / sqrt(1 - 'x^2);
-tot: integrate(ksi, 'x, -1, 0);
+ksi: 2 * 'x / sqrt(1 - 'x^2)$
+tot: integrate(ksi, 'x, -1, 0)$
 
-assume(x > -1, x < 1, i > 0, n > 0);
-G(a, b):=integrate(ksi, 'x, a, b);
+assume(x > -1, x < 1, i > 0, n > 0)$
+G(a, b):=integrate(ksi, 'x, a, b)$
 
-eq: G(-1, 'x) - i * tot / n;
-so: rhs(solve(eq, x)[2]);
-define(f('n, 'i), so);
+eq: G(-1, 'x) - i * tot / n$
+so: rhs(solve(eq, x)[2])$
+define(f('n, 'i), so)$
 F(n, i):= block([a: f(n, i), b: f(n, i + 1)],
-integrate(ksi * 'x, 'x, a, b) / integrate(ksi, 'x, a, b));
+integrate(ksi * 'x, 'x, a, b) / integrate(ksi, 'x, a, b)) $
 
-n: 50;
+n: 50$
 with_stdout("o",
 for i: 0 thru n - 1 do
 printf(true, "~,16e ~,16e ~,16e~%", -float(F(n, i)), 0, tot / n),
 for i: 0 thru n - 1 do
-printf(true, "~,16e ~,16e ~,16e~%", float(F(n, n - 1 - i)), 0, -tot / n));
+printf(true, "~,16e ~,16e ~,16e~%", float(F(n, n - 1 - i)), 0, -tot / n))$

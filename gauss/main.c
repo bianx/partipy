@@ -38,7 +38,7 @@ struct Param {
 };
 
 enum { SIZE = 999 };
-static const double epsrel = 100;
+static const double epsrel = 1;
 static const double epsabs = 0;
 
 static const gsl_odeiv2_step_type **Type[] = {
@@ -219,7 +219,6 @@ main(int argc, char **argv)
       x[i] = buf[j++];
       y[i] = buf[j++];
       ksi[i] = buf[j++];
-      fprintf(stderr, "xyksi: %g %g %g\n", x[i], y[i], ksi[i]);
     }
     
     psi_param.delta = delta;
@@ -249,6 +248,8 @@ main(int argc, char **argv)
     }
     dt = t1 / (m - 1);
     t = 0;
+    i = 0;
+    write(n, x, y, i);
     for (i = 0; i < m; i++) {
 	ti = dt * i;
 	if (gsl_odeiv2_driver_apply(driver, &t, ti, z) != GSL_SUCCESS) {

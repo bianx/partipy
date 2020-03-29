@@ -1,0 +1,20 @@
+f(x):= 2 * 'x / sqrt(1 - 'x^2);
+
+assume(cos(u) > 0);
+I0: integrate(f('x), 'x);
+I0: trigsimp(I0), x = sin('u);
+
+I1: integrate(f('x) * 'x, 'x);
+I1: trigsimp(I1), x = sin('u);
+
+buildq([I0],
+  F(x):=block([u: asin(x)],
+    I0))$
+''%$
+
+h: (F(1) - F(0))/n;
+
+assume( (-2*n) + (2*i) + 1 < 0);
+
+F(x) - F(0) = (i + 1/2) * h;
+so: rhs(solve(%, x)[2]);
