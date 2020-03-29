@@ -33,9 +33,9 @@ set key off
 `$border`
 output = "$b.png"
 set output output
-set yrange [-0.01:0.01]
+set yrange [-0.001:0.008]
 print "write: ", output
-plot "<tail -n 12 $i" w lp lw 4
+plot "<tail -n 12 $i" w lp lw 4 pt 7 ps 3
 !
 if test $? -ne 0
 then echo >&2 "gnuplot failed"

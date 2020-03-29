@@ -7,6 +7,7 @@ CFLAGS = -g -Ofast
 LINK = $(CC)
 M = \
 main\
+main2\
 
 GSL_CFLAGS = `pkg-config --cflags gsl`
 GSL_LDFLAGS = `pkg-config --libs gsl`

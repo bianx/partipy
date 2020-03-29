@@ -1,12 +1,11 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <float.h>
 #include <string.h>
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_odeiv2.h>
 
 #define pi (3.141592653589793)
-static char me[] = "gauss/main";
+static char me[] = "gauss/main2";
 static void
 usg(void)
 {
@@ -16,7 +15,7 @@ usg(void)
     exit(1);
 }
 
-static int func(double, const double *, double *, void *);
+static int function(const double *, double *, void *);
 
 static int dpsi(double, double, double *, double *, void *);
 static const double dpsi_coef = 1 / (2 * pi);
@@ -25,6 +24,17 @@ static int punto_write(int n, const double *, const double *, int step);
 static int skel_write(int n, const double *, const double *, int step);
 static int off_write(int n, const double *, const double *, int step);
 static int gnuplot_write(int n, const double *, const double *, int step);
+
+struct Ode;
+struct OdeParam {
+  int n;
+  int (*function)(const double *, double *, void *);
+  void *param;
+  double dt;
+};
+static int ode_ini(char **, struct OdeParam *, struct Ode **);
+static int ode_step(struct Ode *, double *y);
+static int ode_fin(struct Ode *);
 
 struct PsiParam {
     double delta;
@@ -37,25 +47,6 @@ struct Param {
 };
 
 enum { SIZE = 999 };
-static const double epsrel = 1;
-static const double epsabs = 0;
-
-static const gsl_odeiv2_step_type **Type[] = {
-    &gsl_odeiv2_step_rk2,
-    &gsl_odeiv2_step_rk4,
-    &gsl_odeiv2_step_rk8pd,
-    &gsl_odeiv2_step_rkck,
-    &gsl_odeiv2_step_rkf45,
-};
-
-static const char *Name[] = {
-    "rk2",
-    "rk4",
-    "rk8pd",
-    "rkck",
-    "rkf45",
-};
-
 static const char *WriteName[] = {
     "gnuplot",
     "off",
@@ -75,21 +66,15 @@ int
 main(int argc, char **argv)
 {
     (void) argc;
-    const char *scheme;
     char line[SIZE];
-    double t;
     double dt;
-    double dt_start;
     double delta;
-    double ti;
     double t1;
     double *x;
     double *y;
     double *z;
     double *buf;
     double *ksi;
-    gsl_odeiv2_driver *driver;
-    gsl_odeiv2_system sys;
     int Dflag;
     int i;
     int j;
@@ -101,9 +86,10 @@ main(int argc, char **argv)
     int (*write)(int, const double *, const double *, int);
     struct Param param;
     struct PsiParam psi_param;
+    struct Ode *ode;
+    struct OdeParam ode_param;
 
     Dflag = Mflag = Tflag = 0;
-    scheme = "rk4";
     write = NULL;
     while (*++argv != NULL && argv[0][0] == '-')
 	switch (argv[0][1]) {
@@ -154,14 +140,6 @@ main(int argc, char **argv)
 		    break;
 		}
 	    }
-	    break;
-	case 's':
-	    argv++;
-	    if (argv[0] == NULL) {
-		fprintf(stderr, "%s: -s needs an argument\n", me);
-		exit(2);
-	    }
-	    scheme = argv[0];
 	    break;
 	default:
 	    fprintf(stderr, "%s: unknown option '%s'\n", me, argv[0]);
@@ -219,40 +197,25 @@ main(int argc, char **argv)
       y[i] = buf[j++];
       ksi[i] = buf[j++];
     }
-    
+
     psi_param.delta = delta;
     param.n = n;
     param.psi_param = &psi_param;
     param.ksi = ksi;
-    dt_start = 1e-5;
-    sys.function = func;
-    sys.jacobian = NULL;
-    sys.dimension = 2 * n;
-    sys.params = &param;
-    for (i = 0;; i++) {
-	if (i == sizeof(Type) / sizeof(*Type)) {
-	    fprintf(stderr, "%s: unknown scheme '%s'\n", me, scheme);
-	    exit(2);
-	}
-	if (strncmp(scheme, Name[i], SIZE) == 0) {
-	    driver = gsl_odeiv2_driver_alloc_y_new(&sys, *Type[i],
-						   dt_start, epsrel,
-						   epsabs);
-	    if (driver == NULL) {
-		fprintf(stderr, "%s: driver allocation failed\n", me);
-		exit(2);
-	    }
-	    break;
-	}
-    }
     dt = t1 / (m - 1);
-    t = 0;
-    i = 0;
-    write(n, x, y, i);
-    for (i = 0; i < m; i++) {
-	ti = dt * i;
-	if (gsl_odeiv2_driver_apply(driver, &t, ti, z) != GSL_SUCCESS) {
-	    fprintf(stderr, "%s: driver failed\n", me);
+    ode_param.n = 2 * n;
+    ode_param.function = function;
+    ode_param.param = &param;
+    ode_param.dt = dt;
+    if (ode_ini(argv, &ode_param, &ode) != 0) {
+      fprintf(stderr, "%s: ode_ini failed\n", me);
+      exit(2);
+    }
+    write(n, x, y, 0);
+    fprintf(stderr, "delta: %g\n", delta);
+    for (i = 1; i < m; i++) {
+	if (ode_step(ode, z) != 0) {
+	    fprintf(stderr, "%s: ode_step failed\n", me);
 	    exit(2);
 	}
 	write(n, x, y, i);
@@ -260,11 +223,11 @@ main(int argc, char **argv)
     free(z);
     free(buf);
     free(ksi);
-    gsl_odeiv2_driver_free(driver);
+    ode_fin(ode);
 }
 
 static int
-func(double t, const double *z, double *f, void *params0)
+function(const double *z, double *f, void *params0)
 {
     const double *ksi;
     const double *x;
@@ -280,7 +243,6 @@ func(double t, const double *z, double *f, void *params0)
     int n;
     struct Param *params;
     void *psi_param;
-    (void) (t);
 
     params = params0;
     n = params->n;
@@ -305,7 +267,7 @@ func(double t, const double *z, double *f, void *params0)
 	fx[i] *= dpsi_coef;
 	fy[i] *= dpsi_coef;
     }
-    return GSL_SUCCESS;
+    return 0;
 }
 
 static int
@@ -454,4 +416,80 @@ dpsi(double x, double y, double *u, double *v, void *p0)
 	*v = 0;
     }
     return 0;
+}
+
+struct Ode {
+  int n;
+  int (*function)(const double *, double *, void *);
+  void *param;
+  double dt;
+  double *y;
+  double *f;
+  int (*step)(struct Ode *, double *);
+};
+
+
+static int step_euler(struct Ode *, double *);
+
+static int
+ode_ini(char ** argv, struct OdeParam * p, struct Ode ** pq)
+{
+  struct Ode *q;
+  double *y;
+  double *f;
+  if ((q = malloc(sizeof(*q))) == NULL) {
+    fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+    return 1;
+  }
+  if ((y = malloc(p->n * sizeof(*y))) == NULL) {
+    fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+    return 1;
+  }
+  if ((f = malloc(p->n * sizeof(*f))) == NULL) {
+    fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+    return 1;
+  }
+  q->n = p->n;
+  q->function = p->function;
+  q->param = p->param;
+  q->dt = p->dt;
+  q->y = y;
+  q->f = f;
+  q->step = step_euler;
+
+  *pq = q;
+  return 0;
+}
+
+static int
+ode_step(struct Ode * q, double *y)
+{
+  return q->step(q, y);
+}
+
+static int
+ode_fin(struct Ode * q)
+{
+  free(q->y);
+  free(q->f);
+  free(q);
+  return 0;
+}
+
+static int
+step_euler(struct Ode * q, double *y)
+{
+  double *f;
+  double dt;
+  int i;
+
+  f = q->f;
+  dt = q->dt;
+  if (q->function(y, f, q->param) != 0) {
+    fprintf(stderr, "%s:%d: function failed\n", __FILE__, __LINE__);
+    return 1;
+  }
+  for (i = 0; i < q->n; i++)
+    y[i] += dt * f[i];
+  return 0;
 }
