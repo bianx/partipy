@@ -1,7 +1,7 @@
+#include <float.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
-#include <float.h>
 #include <string.h>
 //#include "float/real.h"
 #include "double/real.h"
@@ -13,7 +13,7 @@ static void
 usg(void)
 {
     fprintf(stderr,
-            "%s -t time -m M -e every -d delta -c [chorin gauss krasny] -s [euler rk4] -o [punto|skel|off|gnuplot] [> punto] < initial\n",
+            "%s -t time -m M -e every -d delta -c [chorin gauss j0 krasny] -s [euler rk4] -o [punto|skel|off|gnuplot] [> punto] < initial\n",
             me);
     exit(1);
 }
@@ -26,6 +26,8 @@ static int chorin_dpsi(real, real, real *, real *, void *);
 static real chorin_coef(void *);
 static int krasny_dpsi(real, real, real *, real *, void *);
 static real krasny_coef(void *);
+static int j0_dpsi(real, real, real *, real *, void *);
+static real j0_coef(void *);
 
 struct Core {
     int (*dpsi)(real, real, real *, real *, void *);
@@ -36,11 +38,13 @@ struct Core {
 static struct Core Core[] = {
     { chorin_dpsi, chorin_coef, NULL },
     { gauss_dpsi, gauss_coef, NULL },
+    { j0_dpsi, j0_coef, NULL },
     { krasny_dpsi, krasny_coef, NULL },
 };
 static const char *CoreName[] = {
     "chorin",
     "gauss",
+    "j0",
     "krasny",
 };
 
@@ -122,6 +126,7 @@ main(int argc, char **argv)
     Eflag = Dflag = Mflag = Tflag = Sflag = 0;
     write = NULL;
     core = NULL;
+    scheme = NULL;
     while (*++argv != NULL && argv[0][0] == '-')
         switch (argv[0][1]) {
         case 'h':
@@ -484,6 +489,7 @@ gnuplot_write(int n, const real * x, const real * y, int step)
 static real
 gauss_coef(void *p)
 {
+  (void)p;
     return 1 / (2 * pi);
 }
 
@@ -512,8 +518,40 @@ gauss_dpsi(real x, real y, real * u, real * v, void *p0)
 }
 
 static real
+j0_coef(void *p)
+{
+  (void)p;
+    return 1 / (2 * pi);
+}
+
+static int
+j0_dpsi(real x, real y, real * u, real * v, void *p0)
+{
+    real coef;
+    real delta;
+    real r2;
+    real r;
+    struct PsiParam *p;
+
+    p = p0;
+    delta = p->delta;
+    r2 = x * x + y * y;
+    if (r2 > 10 * DBL_MIN) {
+      r = sqrtr(r2);
+      coef = (1 - j0(2*r/delta)) / r2;
+      *u = coef * x;
+      *v = coef * y;
+    } else {
+        *u = 0;
+        *v = 0;
+    }
+    return 0;
+}
+
+static real
 chorin_coef(void *p)
 {
+  (void)p;
     return 1 / (2 * pi);
 }
 
@@ -546,6 +584,7 @@ chorin_dpsi(real x, real y, real * u, real * v, void *p0)
 static real
 krasny_coef(void *p)
 {
+  (void)p;
     return 1.0;
 }
 
@@ -602,6 +641,7 @@ ode_ini(char **argv, struct OdeParam *p, struct Ode **pq)
     int i;
     struct Ode *q;
 
+    (void)argv;
     if ((q = malloc(sizeof(*q))) == NULL) {
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         return 1;

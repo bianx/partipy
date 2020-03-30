@@ -8,19 +8,17 @@ LINK = $(CC)
 M = \
 main\
 
-GSL_CFLAGS = `pkg-config --cflags gsl`
-GSL_LDFLAGS = `pkg-config --libs gsl`
 M_LDFLAGS = -lm
 
 all: $M
 main.o: double/real.h
 main.o: float/real.h
 
-.c.o:; $(CC) -c $(CFLAGS) $(GSL_CFLAGS) $<
-.o:; $(LINK) $< $(LDFLAGS) $(GSL_LDFLAGS) $(M_LDFLAGS) -o $@
+.c.o:; $(CC) -c $(CFLAGS) $<
+.o:; $(LINK) $< $(LDFLAGS) $(M_LDFLAGS) -o $@
 .c:
 %: %.c
 
 lint:; make CFLAGS='-Wall -Wextra -g -O2'
 
-clean:; rm -f -- $M
+clean:; rm -f -- $M $(M:=.o)
