@@ -1,5 +1,5 @@
-#define FM "f"
-typedef float real;
+#define FM "lf"
+typedef double real;
 
 static real sinr(real x)
 {
@@ -10,7 +10,6 @@ static real cosr(real x)
 {
   return cos(x);
 }
-
 
 static real sqrtr(real x)
 {
