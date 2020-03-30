@@ -3,18 +3,11 @@
 #include <math.h>
 #include <float.h>
 #include <string.h>
+//#include "float/real.h"
+#include "double/real.h"
 
 #define pi (3.141592653589793)
 static char me[] = "gauss/main2";
-
-#define FM "f"
-typedef float real;
-
-#define sin sinf
-#define cos cosf
-
-/* #define FM "lf"
-   typedef double real; */
 
 static void
 usg(void)
@@ -231,7 +224,7 @@ main(int argc, char **argv)
             fprintf(stderr, "%s: ode_step failed\n", me);
             exit(2);
         }
-        write(n, x, y, i);
+	write(n, x, y, i);
     }
     free(z);
     free(buf);
@@ -306,7 +299,7 @@ skel_write(int n, const real * x, const real * y, int step)
 
     npolylines = 1;
     z = 0;
-    snprintf(path, SIZE, "%05d.skel", step);
+    snprintf(path, SIZE, "%06d.skel", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
     if ((f = fopen(path, "w")) == NULL) {
         fprintf(stderr, "%s: fail to open '%s'\n", me, path);
@@ -350,11 +343,11 @@ off_write(int n, const real * x, const real * y, int step)
     m = NTRI;
     h = 2 * pi / m;
     for (i = 0; i < m; i++) {
-        u[i] = r * cos(i * h);
-        v[i] = r * sin(i * h);
+        u[i] = r * cosr(i * h);
+        v[i] = r * sinr(i * h);
     }
     z = 0;
-    snprintf(path, SIZE, "%05d.off", step);
+    snprintf(path, SIZE, "%06d.off", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
     if ((f = fopen(path, "w")) == NULL) {
         fprintf(stderr, "%s: fail to open '%s'\n", me, path);
@@ -390,7 +383,7 @@ gnuplot_write(int n, const real * x, const real * y, int step)
     int i;
     FILE *f;
 
-    snprintf(path, SIZE, "%05d.dat", step);
+    snprintf(path, SIZE, "%06d.dat", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
     if ((f = fopen(path, "w")) == NULL) {
         fprintf(stderr, "%s: fail to open '%s'\n", me, path);
@@ -421,7 +414,7 @@ dpsi(real x, real y, real * u, real * v, void *p0)
         *u = coef * x;
         *v = coef * y;
     } else if (r2 > 10 * DBL_MIN) {
-        coef = 1 / sqrt(r2) / delta;
+        coef = 1 / sqrtr(r2) / delta;
         *u = coef * x;
         *v = coef * y;
     } else {
@@ -476,7 +469,7 @@ ode_ini(char **argv, struct OdeParam *p, struct Ode **pq)
     q->function = p->function;
     q->n = p->n;
     q->param = p->param;
-    q->step = step_rk4;
+    q->step = step_euler;
     q->y0 = y0;
     q->ytmp = ytmp;
 
