@@ -1,4 +1,6 @@
-awk '
+#!/bin/sh
+
+"${AWK=awk}" '
 BEGIN {
     n = 50
     h = 2 / n

@@ -1,4 +1,6 @@
-awk '
+#!/bin/sh
+
+"${AWK=awk}" '
 BEGIN {
     pi = 2*atan2(1, 0)
     n = 400
@@ -6,6 +8,8 @@ BEGIN {
     ksi = 1 / (2 * n)
     for (i = 0; i < n; i++) {
 	x = i * h
-	print x + 0.01 * sin(2 * pi * x), -0.01 * sin(2 * pi * x), ksi
+	x0 = x + 0.01 * sin(2 * pi * x)
+	y0 = -0.01 * sin(2 * pi * x)
+	printf "%.16e %.16e %.16e\n", x0, y0, ksi
     }
 }'
