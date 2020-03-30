@@ -6,20 +6,27 @@ BEGIN {
     pi = 3.141592653589793
     ksi = 1
 
-    rlo = 0
-    rhi = 1
-    dr = (rhi - rlo)/n
+    alo = 0
+    ahi = 1
+    da = (ahi - alo)/n
+
+    blo = 0
+    bhi = 2
+    db = (bhi - blo)/n
+
     plo = 0
     phi = 2*pi
-    a = 4
+
+    k = 4
     for (i = 0; i < n; i++) {
-	m = a*(2*i + 1)
+	m = k*(2*i + 1)
 	for (j = 0; j < m; j++) {
 	    dp = (phi - plo)/m
-	    r = rlo + dr * (i + 1/2)
+	    a = alo + da * (i + 1/2)
+	    b = blo + db * (i + 1/2)
 	    p = plo + dp * (j + 1/2)
-	    x = r*cos(p)
-	    y = r*sin(p)
+	    x = a*cos(p)
+	    y = b*sin(p)
 	    print x, y, ksi
 	}
     }
