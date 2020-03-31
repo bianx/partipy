@@ -1,7 +1,7 @@
 load("vect");
 express([dx, dy, 0] ~ [0, 0, 1]);
 
-assume(z > 0);
+assume(y > 0);
 factor(2 * %pi * integrate(exp(-z^2/d^2), z, 0, y));
 
 f(y):=exp(-y^2)/%pi;
