@@ -530,11 +530,8 @@ hald_dpsi(real x, real y, real * u, real * v, void *p0)
     d2 = delta * delta;
     r2 = x * x + y * y;
     if (r2 > 10 * DBL_MIN) {
-        r = sqrtr(r2);
-        if (hald_integral(r / delta, &coef) != 0) {
-            fprintf(stderr, "%s: hald_integral failed\n", me);
-            return 1;
-        }
+        r = sqrtr(r2) / delta;
+	coef = 1 - 8.0/3.0*j1(2*r)/(2*r) + 2.0/3*j1(r)/r;
         coef /= r2;
         *u = coef * x;
         *v = coef * y;
@@ -819,40 +816,4 @@ step_rk4(struct Ode *q, real * y)
         y[i] += h * k[i] / 6;
     }
     return 0;
-}
-
-static real
-j2(real x)
-{
-  real ans;
-  return jn(2, x);
-}
-
-static real
-fun(real y)
-{
-  if (y < 0.05)
-    return (5*y)/(8*pi)-(7*y*y*y)/(32*pi);
-  else
-    return (4 * j2(2 * y) - j2(y)) / y;
-}
-
-static int
-hald_integral(real y, real * ans)
-{
-  int i;
-  int n;
-  real h;
-  real s;
-  real x;
-  n = 20;
-  h = y / n;
-  s = 0;
-  for (i = 1; i < n; i++) {
-    x = h * i;
-    s += fun(x);
-  }
-  s += fun(0)/2 + fun(y)/2;
-  *ans = h * s;
-  return 0;
 }
