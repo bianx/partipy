@@ -13,7 +13,7 @@ static void
 usg(void)
 {
     fprintf(stderr,
-            "%s -t time -m M -e every -d delta -c [chorin gauss j0 krasny] -s [euler rk4] -o [punto|skel|off|gnuplot] [> punto] < initial\n",
+            "%s -t time -m M -e every -d delta -c [chorin gauss hald j0 krasny] -s [euler rk4] -o [punto|skel|off|gnuplot] [> punto] < initial\n",
             me);
     exit(1);
 }
