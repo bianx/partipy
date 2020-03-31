@@ -27,7 +27,7 @@ BEGIN {
 	    p = plo + dp * (j + 1/2)
 	    x = a*cos(p)
 	    y = b*sin(p)
-	    print x, y, ksi
+	    printf "%.16e %.16e %.16e\n", x, y, ksi
 	}
     }
 }
