@@ -30,11 +30,10 @@ BEGIN {
 	printf "%.16e %.16e %.16e\n", x[k], y[k], ksi[k] * dA
 }
 
-function vorticity(x, y,   inside)
+function vorticity(x, y,   r2)
 {
     r2 = x^2 + y^2
-    inside = r2 < 1
-    return inside ? (1 - r2)^3 : 0
+    return r2 < 1 ? (1 - r2)^3 : 0
 }
 
 '
