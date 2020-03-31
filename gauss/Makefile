@@ -2,9 +2,7 @@
 .SUFFIXES: .o .c
 .PHONY: clean lint
 
-CC = c99
-CFLAGS = -g -Ofast
-LINK = $(CC)
+include ../conf.mk
 M = \
 main\
 
