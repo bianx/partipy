@@ -3,12 +3,13 @@
 
 include ../../conf.mk
 include obj.mk
-L = libvofi.a
-H = vofi.h
+L = libvof.a
+H = vof.h
+M_CFLAGS = -I../vofi
 
 $L: $O; ar rv $@ $O && ranlib $@
 
-.c.o:; $(CC) -c $(CFLAGS) $< -o $@
+.c.o:; $(CC) -c $(CFLAGS) $(M_CFLAGS) $< -o $@
 include dep.mk
 lint:; make CFLAGS='-Wall -Wextra -g -O2'
 dep:; for i in *.c; do $(CPP) -MM $$i; done > dep.mk
