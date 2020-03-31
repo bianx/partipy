@@ -1,3 +1,3 @@
-CC = c99
-CFLAGS = -g -Og
+CC = gcc
+CFLAGS = -g -Ofast
 LINK = $(CC)

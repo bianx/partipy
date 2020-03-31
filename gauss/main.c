@@ -24,10 +24,14 @@ static int gauss_dpsi(real, real, real *, real *, void *);
 static real gauss_coef(void *);
 static int chorin_dpsi(real, real, real *, real *, void *);
 static real chorin_coef(void *);
+static int hald_dpsi(real, real, real *, real *, void *);
+static real hald_coef(void *);
 static int krasny_dpsi(real, real, real *, real *, void *);
 static real krasny_coef(void *);
 static int j0_dpsi(real, real, real *, real *, void *);
 static real j0_coef(void *);
+
+static int hald_integral(real, real *);
 
 struct Core {
     int (*dpsi)(real, real, real *, real *, void *);
@@ -38,20 +42,27 @@ struct Core {
 static struct Core Core[] = {
     { chorin_dpsi, chorin_coef, NULL },
     { gauss_dpsi, gauss_coef, NULL },
+    { hald_dpsi, hald_coef, NULL },
     { j0_dpsi, j0_coef, NULL },
     { krasny_dpsi, krasny_coef, NULL },
 };
+
 static const char *CoreName[] = {
     "chorin",
     "gauss",
+    "hald",
     "j0",
     "krasny",
 };
 
-static int punto_write(int n, const real *, const real *, const real *, int step);
-static int skel_write(int n, const real *, const real *, const real *, int step);
-static int off_write(int n, const real *, const real *, const real *, int step);
-static int gnuplot_write(int n, const real *, const real *, const real *, int step);
+static int punto_write(int n, const real *, const real *, const real *,
+                       int step);
+static int skel_write(int n, const real *, const real *, const real *,
+                      int step);
+static int off_write(int n, const real *, const real *, const real *,
+                     int step);
+static int gnuplot_write(int n, const real *, const real *, const real *,
+                         int step);
 
 struct Ode;
 struct OdeParam {
@@ -84,7 +95,8 @@ static const char *WriteName[] = {
     "skel",
 };
 
-static int (*const WriteFun[])(int, const real *, const real *, const real *, int) = {
+static int (*const WriteFun[])(int, const real *, const real *,
+                               const real *, int) = {
     gnuplot_write,
     off_write,
     punto_write,
@@ -212,7 +224,7 @@ main(int argc, char **argv)
                     break;
                 }
             }
-            break;	    
+            break;
         default:
             fprintf(stderr, "%s: unknown option '%s'\n", me, argv[0]);
             exit(2);
@@ -244,7 +256,7 @@ main(int argc, char **argv)
     if (core == NULL) {
         fprintf(stderr, "%s: -c is not given\n", me);
         exit(2);
-    }    
+    }
 
     ncap = 1;
     if ((buf = malloc(ncap * sizeof(*buf))) == NULL) {
@@ -310,7 +322,7 @@ main(int argc, char **argv)
             exit(2);
         }
         if (i % every == 0)
-	  write(n, x, y, ksi, i);
+            write(n, x, y, ksi, i);
     }
     free(z);
     free(buf);
@@ -365,26 +377,29 @@ function(const real * z, real * f, void *params0)
 }
 
 static int
-punto_write(int n, const real * x, const real * y, const real * ksi, int step)
+punto_write(int n, const real * x, const real * y, const real * ksi,
+            int step)
 {
     int j;
 
     if (step > 0)
         printf("\n");
     for (j = 0; j < n; j++)
-      printf("%.16e %.16e %.16e\n", x[j], y[j], ksi[j]);
+        printf("%.16e %.16e %.16e\n", x[j], y[j], ksi[j]);
     return 0;
 }
 
 static int
-skel_write(int n, const real * x, const real * y, const real * ksi, int step)
+skel_write(int n, const real * x, const real * y, const real * ksi,
+           int step)
 {
     char path[SIZE];
     real z;
     FILE *f;
     int i;
     int npolylines;
-    (void)ksi;
+
+    (void) ksi;
 
     npolylines = 1;
     z = 0;
@@ -414,7 +429,8 @@ skel_write(int n, const real * x, const real * y, const real * ksi, int step)
 }
 
 static int
-off_write(int n, const real * x, const real * y, const real * ksi, int step)
+off_write(int n, const real * x, const real * y, const real * ksi,
+          int step)
 {
 #define NTRI (50)
     char path[SIZE];
@@ -428,7 +444,8 @@ off_write(int n, const real * x, const real * y, const real * ksi, int step)
     int k;
     int m;
     static const real r = 0.05;
-    (void)ksi;
+
+    (void) ksi;
 
     m = NTRI;
     h = 2 * pi / m;
@@ -467,12 +484,14 @@ off_write(int n, const real * x, const real * y, const real * ksi, int step)
 }
 
 static int
-gnuplot_write(int n, const real * x, const real * y, const real * ksi, int step)
+gnuplot_write(int n, const real * x, const real * y, const real * ksi,
+              int step)
 {
     char path[SIZE];
     int i;
     FILE *f;
-    (void)ksi;
+
+    (void) ksi;
 
     snprintf(path, SIZE, "%06d.dat", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
@@ -490,9 +509,46 @@ gnuplot_write(int n, const real * x, const real * y, const real * ksi, int step)
 }
 
 static real
+hald_coef(void *p)
+{
+    (void) p;
+    return 1 / (3 * pi);        /* (2/3)/(2*pi) */
+}
+
+static int
+hald_dpsi(real x, real y, real * u, real * v, void *p0)
+{
+    real coef;
+    real d2;
+    real delta;
+    real r2;
+    real r;
+    struct PsiParam *p;
+
+    p = p0;
+    delta = p->delta;
+    d2 = delta * delta;
+    r2 = x * x + y * y;
+    if (r2 > 10 * DBL_MIN) {
+        r = sqrtr(r2);
+        if (hald_integral(r / delta, &coef) != 0) {
+            fprintf(stderr, "%s: hald_integral failed\n", me);
+            return 1;
+        }
+        coef /= r2;
+        *u = coef * x;
+        *v = coef * y;
+    } else {
+        *u = 0;
+        *v = 0;
+    }
+    return 0;
+}
+
+static real
 gauss_coef(void *p)
 {
-  (void)p;
+    (void) p;
     return 1 / (2 * pi);
 }
 
@@ -523,7 +579,7 @@ gauss_dpsi(real x, real y, real * u, real * v, void *p0)
 static real
 j0_coef(void *p)
 {
-  (void)p;
+    (void) p;
     return 1 / (2 * pi);
 }
 
@@ -540,10 +596,10 @@ j0_dpsi(real x, real y, real * u, real * v, void *p0)
     delta = p->delta;
     r2 = x * x + y * y;
     if (r2 > 10 * DBL_MIN) {
-      r = sqrtr(r2);
-      coef = (1 - j0(2*r/delta)) / r2;
-      *u = coef * x;
-      *v = coef * y;
+        r = sqrtr(r2);
+        coef = (1 - j0(2 * r / delta)) / r2;
+        *u = coef * x;
+        *v = coef * y;
     } else {
         *u = 0;
         *v = 0;
@@ -554,7 +610,7 @@ j0_dpsi(real x, real y, real * u, real * v, void *p0)
 static real
 chorin_coef(void *p)
 {
-  (void)p;
+    (void) p;
     return 1 / (2 * pi);
 }
 
@@ -587,7 +643,7 @@ chorin_dpsi(real x, real y, real * u, real * v, void *p0)
 static real
 krasny_coef(void *p)
 {
-  (void)p;
+    (void) p;
     return 1.0;
 }
 
@@ -644,7 +700,7 @@ ode_ini(char **argv, struct OdeParam *p, struct Ode **pq)
     int i;
     struct Ode *q;
 
-    (void)argv;
+    (void) argv;
     if ((q = malloc(sizeof(*q))) == NULL) {
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         return 1;
@@ -763,4 +819,40 @@ step_rk4(struct Ode *q, real * y)
         y[i] += h * k[i] / 6;
     }
     return 0;
+}
+
+static real
+j2(real x)
+{
+  real ans;
+  return jn(2, x);
+}
+
+static real
+fun(real y)
+{
+  if (y < 0.05)
+    return (5*y)/(8*pi)-(7*y*y*y)/(32*pi);
+  else
+    return (4 * j2(2 * y) - j2(y)) / y;
+}
+
+static int
+hald_integral(real y, real * ans)
+{
+  int i;
+  int n;
+  real h;
+  real s;
+  real x;
+  n = 20;
+  h = y / n;
+  s = 0;
+  for (i = 1; i < n; i++) {
+    x = h * i;
+    s += fun(x);
+  }
+  s += fun(0)/2 + fun(y)/2;
+  *ans = h * s;
+  return 0;
 }
