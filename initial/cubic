@@ -1,0 +1,35 @@
+#!/bin/sh
+
+"${AWK=awk}" '
+BEGIN {
+    n = 7
+    pi = 3.141592653589793
+
+    rlo = 0
+    rhi = 1
+    dr = (rhi - rlo)/n
+    plo = 0
+    phi = 2*pi
+    a = 4
+    for (i = 0; i < n; i++) {
+	m = a*(2*i + 1)
+	for (j = 0; j < m; j++) {
+	    dp = (phi - plo)/m
+	    r = rlo + dr * (i + 1/2)
+	    p = plo + dp * (j + 1/2)
+	    x = r*cos(p)
+	    y = r*sin(p)
+	    ksi = vorticity(x, y)
+	    dA = r * dr * dp
+	    printf "%.16e %.16e %.16e\n", x, y, ksi * dA
+	}
+    }
+}
+
+function vorticity(x, y,   inside)
+{
+    inside = x^2 + y^2 < 1
+    return inside ? (1 - (x^2 + y^2))^3 : 0
+}
+
+'
