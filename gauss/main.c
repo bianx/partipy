@@ -48,10 +48,10 @@ static const char *CoreName[] = {
     "krasny",
 };
 
-static int punto_write(int n, const real *, const real *, int step);
-static int skel_write(int n, const real *, const real *, int step);
-static int off_write(int n, const real *, const real *, int step);
-static int gnuplot_write(int n, const real *, const real *, int step);
+static int punto_write(int n, const real *, const real *, const real *, int step);
+static int skel_write(int n, const real *, const real *, const real *, int step);
+static int off_write(int n, const real *, const real *, const real *, int step);
+static int gnuplot_write(int n, const real *, const real *, const real *, int step);
 
 struct Ode;
 struct OdeParam {
@@ -84,7 +84,7 @@ static const char *WriteName[] = {
     "skel",
 };
 
-static int (*const WriteFun[])(int, const real *, const real *, int) = {
+static int (*const WriteFun[])(int, const real *, const real *, const real *, int) = {
     gnuplot_write,
     off_write,
     punto_write,
@@ -115,7 +115,7 @@ main(int argc, char **argv)
     int Tflag;
     int Sflag;
     int Eflag;
-    int (*write)(int, const real *, const real *, int);
+    int (*write)(int, const real *, const real *, const real *, int);
     struct Param param;
     struct PsiParam psi_param;
     struct Ode *ode;
@@ -300,7 +300,7 @@ main(int argc, char **argv)
         fprintf(stderr, "%s: ode_ini failed\n", me);
         exit(2);
     }
-    if (write(n, x, y, 0) != 0) {
+    if (write(n, x, y, ksi, 0) != 0) {
         fprintf(stderr, "%s: write failed\n", me);
         exit(2);
     }
@@ -310,7 +310,7 @@ main(int argc, char **argv)
             exit(2);
         }
         if (i % every == 0)
-            write(n, x, y, i);
+	  write(n, x, y, ksi, i);
     }
     free(z);
     free(buf);
@@ -365,25 +365,26 @@ function(const real * z, real * f, void *params0)
 }
 
 static int
-punto_write(int n, const real * x, const real * y, int step)
+punto_write(int n, const real * x, const real * y, const real * ksi, int step)
 {
     int j;
 
     if (step > 0)
         printf("\n");
     for (j = 0; j < n; j++)
-        printf("%.16e %.16e\n", x[j], y[j]);
+      printf("%.16e %.16e %.16e\n", x[j], y[j], ksi[j]);
     return 0;
 }
 
 static int
-skel_write(int n, const real * x, const real * y, int step)
+skel_write(int n, const real * x, const real * y, const real * ksi, int step)
 {
     char path[SIZE];
     real z;
     FILE *f;
     int i;
     int npolylines;
+    (void)ksi;
 
     npolylines = 1;
     z = 0;
@@ -413,7 +414,7 @@ skel_write(int n, const real * x, const real * y, int step)
 }
 
 static int
-off_write(int n, const real * x, const real * y, int step)
+off_write(int n, const real * x, const real * y, const real * ksi, int step)
 {
 #define NTRI (50)
     char path[SIZE];
@@ -427,6 +428,7 @@ off_write(int n, const real * x, const real * y, int step)
     int k;
     int m;
     static const real r = 0.05;
+    (void)ksi;
 
     m = NTRI;
     h = 2 * pi / m;
@@ -465,11 +467,12 @@ off_write(int n, const real * x, const real * y, int step)
 }
 
 static int
-gnuplot_write(int n, const real * x, const real * y, int step)
+gnuplot_write(int n, const real * x, const real * y, const real * ksi, int step)
 {
     char path[SIZE];
     int i;
     FILE *f;
+    (void)ksi;
 
     snprintf(path, SIZE, "%06d.dat", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
