@@ -3,8 +3,8 @@
 
 include ../../conf.mk
 include obj.mk
-L = libvofi.a
-H = vofi.h
+L = libcubature.a
+H = cubature.h
 
 $L: $O; ar rv $@ $O && ranlib $@
 
