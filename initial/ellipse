@@ -2,33 +2,46 @@
 
 "${AWK=awk}" '
 BEGIN {
-    n = 7
+    n = 14
     pi = 3.141592653589793
+    a = 1
+    b = 2
     ksi = 1
 
-    alo = 0
-    ahi = 1
-    da = (ahi - alo)/n
-
-    blo = 0
-    bhi = 2
-    db = (bhi - blo)/n
-
+    rlo = 0
+    rhi = 2
+    dr = (rhi - rlo)/n
     plo = 0
     phi = 2*pi
-
-    k = 4
+    c = 4
+    k = 0
     for (i = 0; i < n; i++) {
-	m = k*(2*i + 1)
+	m = c*(2*i + 1)
 	for (j = 0; j < m; j++) {
 	    dp = (phi - plo)/m
-	    a = alo + da * (i + 1/2)
-	    b = blo + db * (i + 1/2)
+	    r = rlo + dr * (i + 1/2)
 	    p = plo + dp * (j + 1/2)
-	    x = a*cos(p)
-	    y = b*sin(p)
-	    printf "%.16e %.16e %.16e\n", x, y, ksi
+	    u = r*cos(p)
+	    v = r*sin(p)
+	    if (ellipse(u, v)) {
+		x[k] = u
+		y[k] = v
+		k++
+	    }
 	}
     }
+    m = k
+
+    A = pi * a * b
+    dA = A / m
+    for (k = 0; k < m; k++)
+	printf "%.16e %.16e %.16e\n", x[k], y[k], ksi * dA
+
 }
+
+function ellipse(x, y)
+{
+    return x^2/a^2 + y^2/b^2 < 1
+}
+
 '
