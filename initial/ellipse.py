@@ -16,7 +16,7 @@ def s(t, a, b, k, n):
 ksi = 10.61
 a = 3
 b = 4
-n = 7
+n = 8
 m0 = 4
 da = a/n
 db = b/n
@@ -29,8 +29,8 @@ for i in range(n):
     for k in range(m):
         sol = scipy.optimize.root_scalar(s, (a0, b0, k, m), x0=0, x1=2*math.pi)
         t = sol.root
-        x.append(a0*math.sin(t))
-        y.append(b0*math.cos(t))
+        x.append(b0*math.sin(t))
+        y.append(a0*math.cos(t))
 
 m = len(x)
 A = math.pi * a * b
