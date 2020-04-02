@@ -15,10 +15,19 @@ def s(t, a, b, k, n):
     c = arc(2*math.pi, a, b)
     return arc(t, a, b) - k * c / n
 
+#def p(y, x):
+#    r2 = x*x + y*y
+#    d2 = d * d
+#    return math.exp(-r2/d2) / math.pi / d2
+
+def J2(z):
+    return scipy.special.jv(2, z)
 def p(y, x):
-    r2 = x*x + y*y
+    eps = 1e-3
     d2 = d * d
-    return math.exp(-r2/d2) / math.pi / d2
+    r = math.sqrt(x**2 + y**2)
+    ans = (4*J2(2*r) - J2(r))/r**2 if r > eps else 15/8 - 21*r**2/32
+    return ans / (3 * math.pi) / d2
 
 def ellipse(y, x, a, b):
     return 1 if (x/b)**2 + (y/a)**2 < 1 else 0
@@ -44,7 +53,7 @@ for i in range(n):
         y.append(a0*math.cos(t))
 
 epsabs = 0
-epsrel = 1e-3
+epsrel = 1e-8
 area = math.pi * a * b
 sys.stderr.write("area: %g\n" % area)
 n = len(x)
