@@ -1,0 +1,17 @@
+declare(i, linear);
+declare([G1, G2, G3], constant);
+
+/* int(e):=integrate(e, y, -inf, +inf); */
+
+h: O(y) - (G1 * p(y - y1) + G2 * p(y - y2) + G3 * p(y - y3));
+H: i(h^2) + 2 * la * (G1 + G2 + G3 - s), expand;
+
+kill(G1, G2, G3);
+%v: [G1, G2, G3, la];
+%q: create_list(diff(H, v), v, %v);
+
+A: coefmatrix(%q/2, %v);
+M: augcoefmatrix(%q/2, %v) $
+-col(M, length(M) + 1), expand;
+/* assume(d  > 0);
+integrate(integrate(exp((-x^2 - y^2)/d^2)/(%pi * d^2), x, -inf, +inf), y, -inf, +inf); */
