@@ -512,7 +512,7 @@ static real
 hald_coef(void *p)
 {
     (void) p;
-    return 1 / (3 * pi);        /* (2/3)/(2*pi) */
+    return 1 / (3 * pi);
 }
 
 static int
@@ -531,7 +531,7 @@ hald_dpsi(real x, real y, real * u, real * v, void *p0)
     r2 = x * x + y * y;
     if (r2 > 10 * DBL_MIN) {
         r = sqrtr(r2) / delta;
-	coef = 1 - 8.0/3.0*j1(2*r)/(2*r) + 2.0/3*j1(r)/r;
+        coef = 1 - 8.0 / 3.0 * j1(2 * r) / (2 * r) + 2.0 / 3 * j1(r) / r;
         coef /= r2;
         *u = coef * x;
         *v = coef * y;

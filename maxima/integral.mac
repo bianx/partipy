@@ -15,3 +15,12 @@ M: augcoefmatrix(%q/2, %v) $
 -col(M, length(M) + 1), expand;
 /* assume(d  > 0);
 integrate(integrate(exp((-x^2 - y^2)/d^2)/(%pi * d^2), x, -inf, +inf), y, -inf, +inf); */
+
+assume(d > 0);
+integrate(integrate(exp((-x^2 - y^2)/d^2)/(%pi * d^2), x, -inf, +inf), y, -inf, +inf);
+
+
+J2(r):=bessel_j(2, r);
+f(r):= (4*J2(2*r) - J2(r))/r^2;
+
+taylor(f(r), r, 0, 2);
