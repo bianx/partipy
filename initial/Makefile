@@ -5,6 +5,7 @@ include ../conf.mk
 
 M = \
 grid\
+ellipse\
 
 M_CFLAGS = -I../lib/vof
 M_LDFLAGS = -L../lib/vofi -L../lib/vof -lvof -lvofi -lm

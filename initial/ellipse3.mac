@@ -1,0 +1,23 @@
+assume(r > 0);
+r0: 0.8;
+a: r0;
+b: 2*r0;
+Ksi: 20;
+q: 2.56085;
+
+f(z, q):=exp(-(q/z)*exp(1/(z - 1)));
+vor(r):= Ksi * (1 - f(r, q));
+
+draw2d(implicit(vor(x, y) - 0.25, x, -1.5, 1.5, y, -1.5, 1.5),
+  implicit(vor(x, y) - 19, x, -1.5, 1.5, y, -1.5, 1.5),
+  implicit(vor(x, y) - 18, x, -1.5, 1.5, y, -1.5, 1.5));
+
+x: a * r * cos(p);
+y: b * r * sin(p);
+
+dA: determinant(jacobian([x, y], ['r, 'p]));
+S: integrate(integrate(dA, r, 0, 1), p, 0, 2*%pi), numer;
+
+%pi * a * b, numer;
+
+integrate(dA*vor(r), r, 0, 1);

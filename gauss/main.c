@@ -35,7 +35,7 @@ static int hald_integral(real, real *);
 
 struct Core {
     int (*dpsi)(real, real, real *, real *, void *);
-     real(*coef) (void *);
+    real(*coef) (void *);
     void *param;
 };
 

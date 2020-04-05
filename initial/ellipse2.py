@@ -58,9 +58,6 @@ area = math.pi * a * b
 sys.stderr.write("area: %g\n" % area)
 n = len(x)
 A = numpy.empty((n, n))
-#A[:,n] = 1
-#A[n,:] = 1
-#A[n, n] = 0
 for i in range(n):
     sys.stderr.write("%02d of %02d\n" % (i, n))
     for j in range(i, n):
