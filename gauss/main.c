@@ -76,6 +76,8 @@ static int ode_ini(char **, struct OdeParam *, struct Ode **);
 static int ode_step(struct Ode *, real * y);
 static int ode_fin(struct Ode *);
 
+static int remesh_m4(int, real *, real *, real *);
+
 struct PsiParam {
     real delta;
 };
@@ -108,37 +110,41 @@ main(int argc, char **argv)
 {
     (void) argc;
     char line[SIZE];
-    real dt;
+    const char *scheme;
+    int Dflag;
+    int Eflag;
+    int every;
+    int i;
+    int j;
+    int m;
+    int Mflag;
+    int n;
+    int ncap;
+    int nremesh;
+    int Sflag;
+    int Tflag;
+    int (*write)(int, const real *, const real *, const real *, int);
+    int (*remesh)(int, real *, real *, real *);
+    real *buf;
     real delta;
+    real dt;
+    real *ksi;
     real t1;
     real *x;
     real *y;
     real *z;
-    real *buf;
-    real *ksi;
-    int Dflag;
-    int i;
-    int j;
-    int m;
-    int every;
-    int Mflag;
-    int n;
-    int ncap;
-    int Tflag;
-    int Sflag;
-    int Eflag;
-    int (*write)(int, const real *, const real *, const real *, int);
-    struct Param param;
-    struct PsiParam psi_param;
+    struct Core *core;
     struct Ode *ode;
     struct OdeParam ode_param;
-    const char *scheme;
-    struct Core *core;
+    struct Param param;
+    struct PsiParam psi_param;
 
     Eflag = Dflag = Mflag = Tflag = Sflag = 0;
     write = NULL;
     core = NULL;
     scheme = NULL;
+    nremesh = 0;
+    remesh = remesh_m4;
     while (*++argv != NULL && argv[0][0] == '-')
         switch (argv[0][1]) {
         case 'h':
@@ -171,6 +177,14 @@ main(int argc, char **argv)
             every = atoi(argv[0]);
             Eflag = 1;
             break;
+        case 'r':
+            argv++;
+            if (argv[0] == NULL) {
+                fprintf(stderr, "%s: -r needs an argument\n", me);
+                exit(2);
+            }
+            nremesh = atoi(argv[0]);
+            break;	    
         case 'd':
             argv++;
             if (argv[0] == NULL) {
@@ -321,8 +335,10 @@ main(int argc, char **argv)
             fprintf(stderr, "%s: ode_step failed\n", me);
             exit(2);
         }
-        if (i % every == 0)
-            write(n, x, y, ksi, i);
+        if (every > 0 && i % every == 0)
+	  write(n, x, y, ksi, i);
+	if (nremesh > 0 && i % nremesh == 0)
+	  remesh(n, x, y, ksi);
     }
     free(z);
     free(buf);
@@ -816,4 +832,10 @@ step_rk4(struct Ode *q, real * y)
         y[i] += h * k[i] / 6;
     }
     return 0;
+}
+
+static int
+remesh_m4(int n, real * x, real * y, real * z) {
+  fprintf(stderr, "m4\n");
+  return 0;
 }
