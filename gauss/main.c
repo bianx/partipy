@@ -72,11 +72,17 @@ struct OdeParam {
     real dt;
     const char *scheme;
 };
+struct RemeshParam {
+  int nx;
+  int ny;
+  double x;
+  double y;
+};
 static int ode_ini(char **, struct OdeParam *, struct Ode **);
 static int ode_step(struct Ode *, real * y);
 static int ode_fin(struct Ode *);
 
-static int remesh_m4(int, real *, real *, real *);
+static int remesh_m4(struct RemeshParam *, int, real *, real *, real *);
 
 struct PsiParam {
     real delta;
@@ -124,7 +130,7 @@ main(int argc, char **argv)
     int Sflag;
     int Tflag;
     int (*write)(int, const real *, const real *, const real *, int);
-    int (*remesh)(int, real *, real *, real *);
+    int (*remesh)(struct RemeshParam *, int, real *, real *, real *);
     real *buf;
     real delta;
     real dt;
@@ -138,6 +144,7 @@ main(int argc, char **argv)
     struct OdeParam ode_param;
     struct Param param;
     struct PsiParam psi_param;
+    struct RemeshParam remesh_param;
 
     Eflag = Dflag = Mflag = Tflag = Sflag = 0;
     write = NULL;
@@ -338,7 +345,7 @@ main(int argc, char **argv)
         if (every > 0 && i % every == 0)
 	  write(n, x, y, ksi, i);
 	if (nremesh > 0 && i % nremesh == 0)
-	  remesh(n, x, y, ksi);
+	  remesh(&remesh_param, n, x, y, ksi);
     }
     free(z);
     free(buf);
@@ -835,7 +842,7 @@ step_rk4(struct Ode *q, real * y)
 }
 
 static int
-remesh_m4(int n, real * x, real * y, real * z) {
+remesh_m4(struct RemeshParam * param, int n, real * x, real * y, real * z) {
   fprintf(stderr, "m4\n");
   return 0;
 }
