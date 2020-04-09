@@ -18,6 +18,7 @@ usg(void)
 
 static double dblint(double (*f)(double, double, void *), void *, double r,
 		     double s, double a, double b);
+static double zero(double r, double phi, void *p0);
 static double cross(double, double, void *);
 static double lin(double r, double phi, void *p0);
 static double gauss(double);
@@ -29,7 +30,7 @@ static const double q = 2.56085;
 static const double Ksi = 20.0;
 static const double a = 0.8;
 static const double b = 2 * 0.8;
-static const double delta = 0.4;
+static const double delta = 0.3;
 
 struct CrossParam {
   double xi;
@@ -46,12 +47,18 @@ struct LinParam {
   double (*psi)(double);
 };
 
-static double f(double z, double q)
+struct ZeroParam {
+  double (*vor)(double, double);
+};
+
+static double
+f(double z, double q)
 {
   return exp(-(q/z)*exp(1/(z - 1)));
 }
 
-static double vorI(double x, double y)
+static double
+vorI(double x, double y)
 {
   double r;
   x /= a;
@@ -63,7 +70,21 @@ static double vorI(double x, double y)
     return 0;
 }
 
-static double vorConst(double x, double y)
+static double
+vorII(double x, double y)
+{
+  double r;
+  x /= a;
+  y /= b;
+  r = sqrt(x*x + y*y);
+  if (r < 1)
+    return Ksi * (1 - r*r*r*r);
+  else
+    return 0;
+}
+
+static double
+vorConst(double x, double y)
 {
   return Ksi;
 }
@@ -95,10 +116,11 @@ main(int argc, char **argv)
     int Verbose;
     struct CrossParam cross_param;
     struct LinParam lin_param;
+    struct ZeroParam zero_param;
     (void) argc;
     
-    gamma = 0;
-    lin_param.vor = vorConst;
+    gamma = 10;
+    lin_param.vor = zero_param.vor = vorConst;
     lin_param.psi = cross_param.psi = hald;
     Verbose = getenv("LOG") != NULL;
     while (*++argv != NULL && argv[0][0] == '-')
@@ -140,6 +162,11 @@ main(int argc, char **argv)
 	i++;
     }
     n = i;
+
+    double Mean;
+    Mean = a * b * dblint(zero, &zero_param, 0, 1, 0, 2 * pi) / n;
+    fprintf(stderr, "Vorticity: %.16g\n", Mean);
+    
     if ((A = malloc(n * n * sizeof(*A))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
@@ -177,6 +204,9 @@ main(int argc, char **argv)
       B[i] = a * b * dblint(lin, &lin_param, 0, 1, 0, 2 * pi);
     }
     for (i = 0; i < n; i++)
+      for (j = 0; j < n; j++)
+	B[i] -= Mean * A[j + i * n];
+    for (i = 0; i < n; i++)
       for (j = 0; j < n; j++) {
 	C[j + i * n] = 0;
 	for (k = 0; k < n; k++)
@@ -202,7 +232,7 @@ main(int argc, char **argv)
 	  Ksi[i] += invC[j + i * n] * A[k + j * n] * B[k];
     }
     for (i = 0; i < n; i++)
-       printf ("%.16e %.16e %.16e\n", x[i], y[i], Ksi[i]);
+       printf ("%.16e %.16e %.16e\n", x[i], y[i], Ksi[i] + Mean);
     gsl_permutation_free(p);
     free(x);
     free(y);
@@ -256,6 +286,19 @@ lin(double r, double phi, void *p0)
   yi = y - p->y;
   ri = sqrt(xi*xi + yi*yi);
   return r * p->vor(x, y) * p->psi(ri);
+}
+
+static double
+zero(double r, double phi, void *p0)
+{
+  double x;
+  double y;
+  struct ZeroParam *p;
+
+  p = p0;
+  x = a * r * cos(phi);
+  y = b * r * sin(phi);
+  return r * p->vor(x, y);
 }
 
 static double

@@ -1,0 +1,17 @@
+load("scifac");
+g1: h1 + m;
+g2: h2 + m;
+g3: h3 + m;
+
+d: (om - g1 * p1 - g2 * p2 - g3 * p3)^2, expand;
+
+declare(s, linear);
+declare([h1, h2, h3, m], constant);
+d: s(d)/2;
+
+kill(h1, h2, h3, m);
+%q: [diff(d, h1), diff(d, h2), diff(d, h3)];
+
+coefmatrix(%q, [h1, h2, h3]);
+
+gcfac(col(augcoefmatrix(%q, [h1, h2, h3]), 4));

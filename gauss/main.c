@@ -641,9 +641,9 @@ hald_coef(void *p)
 static real
 j2(real x)
 {
-  return jn(2, x);
+    return jn(2, x);
 }
-  
+
 static real
 hald_psi(real x, real y, void *p0)
 {
@@ -654,11 +654,11 @@ hald_psi(real x, real y, void *p0)
 
     p = p0;
     d = p->delta;
-    r = sqrtr(x * x + y * y)/d;
+    r = sqrtr(x * x + y * y) / d;
     if (r < 0.001)
-      ans = 15/8.0 - 21*r*r/32.0;
+        ans = 15 / 8.0 - 21 * r * r / 32.0;
     else
-      ans = 1/(r*r) * (4 * j2(2 * r) - j2(r));
+        ans = 1 / (r * r) * (4 * j2(2 * r) - j2(r));
     return ans / (3 * pi * d * d);
 }
 
