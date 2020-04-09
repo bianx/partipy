@@ -159,7 +159,7 @@ main(int argc, char **argv)
     core = NULL;
     scheme = NULL;
     nremesh = 0;
-    remesh = remesh_psi;
+    remesh = remesh_m4;
 
     while (*++argv != NULL && argv[0][0] == '-')
 	switch (argv[0][1]) {
@@ -350,7 +350,7 @@ main(int argc, char **argv)
     remesh_param.xhi = 1.6;
     remesh_param.ylo = -1.6;
     remesh_param.yhi = 1.6;
-    remesh_param.eps = 1e-5;
+    remesh_param.eps = 1e-3;
     remesh_param.core = core;
 
     if (ode_ini(argv, &ode_param, &ode) != 0) {
@@ -968,6 +968,12 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
   for (i = 0; i < m; i++)
     ksi[i] = ksi0[i] * coef;
 
+  real ksi_m;
+  ksi_m = ksi[0];
+  for (i = 0; i < m; i++)
+    if (ksi[i] > ksi_m)
+      ksi_m = ksi[i];
+
   l = 0;
   for (i = 0; i < nx; i++) {
       u = xlo + (i + 0.5) * dx;
@@ -981,7 +987,7 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
 
   j = 0;
   for (i = 0; i < m; i++)
-    if (fabs(ksi[i]) > eps) {
+    if (fabs(ksi[i]) > ksi_m*eps) {
       x[j] = x[i];
       y[j] = y[i];
       ksi[j] = ksi[i];
@@ -1048,6 +1054,12 @@ remesh_psi(void * p0, int * pn, real * x, real * y, real * ksi) {
   for (i = 0; i < m; i++)
     ksi[i] = ksi0[i] * coef;
 
+  real ksi_m;
+  ksi_m = ksi[0];
+  for (i = 0; i < m; i++)
+    if (ksi[i] > ksi_m)
+      ksi_m = ksi[i];
+
   l = 0;
   for (i = 0; i < nx; i++) {
       u = xlo + (i + 0.5) * dx;
@@ -1061,7 +1073,7 @@ remesh_psi(void * p0, int * pn, real * x, real * y, real * ksi) {
 
   j = 0;
   for (i = 0; i < m; i++)
-    if (fabs(ksi[i]) > eps) {
+    if (fabs(ksi[i]) > ksi_m*eps) {
       x[j] = x[i];
       y[j] = y[i];
       ksi[j] = ksi[i];
