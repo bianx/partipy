@@ -15,47 +15,34 @@ def s(t, a, b, k, n):
     c = arc(2*math.pi, a, b)
     return arc(t, a, b) - k * c / n
 
-#def p(y, x):
-#    r2 = x*x + y*y
-#    d2 = d * d
-#    return math.exp(-r2/d2) / math.pi / d2
+def p(y, x):
+    r2 = x*x + y*y
+    d2 = d * d
+    return math.exp(-r2/d2) / math.pi / d2
 
 def J2(z):
     return scipy.special.jv(2, z)
-def p(y, x):
-    eps = 1e-3
-    d2 = d * d
-    r = math.sqrt(x**2 + y**2)
-    ans = (4*J2(2*r) - J2(r))/r**2 if r > eps else 15/8 - 21*r**2/32
-    return ans / (3 * math.pi) / d2
+#def p(y, x):
+#    eps = 1e-3
+#    d2 = d * d
+#    r = math.sqrt(x**2 + y**2)
+#    ans = (4*J2(2*r) - J2(r))/r**2 if r > eps else 15/8 - 21*r**2/32
+#    return ans / (3 * math.pi) / d2
 
 def ellipse(y, x, a, b):
     return 1 if (x/b)**2 + (y/a)**2 < 1 else 0
 
-d = 0.4
-Ksi = 10.61
-a = 3
-b = 4
-n = 4
-m0 = 4
-da = a/n
-db = b/n
-x = []
-y = []
-for i in range(n):
-    a0 = da * (i + 1/2)
-    b0 = db * (i + 1/2)
-    m = m0 * (2 * i + 1)
-    for k in range(m):
-        sol = scipy.optimize.root_scalar(s, (a0, b0, k, m), x0=0, x1=2*math.pi)
-        t = sol.root
-        x.append(b0*math.sin(t))
-        y.append(a0*math.cos(t))
+D = numpy.loadtxt(sys.argv[1])
+x = D[:, 0].tolist()
+y = D[:, 1].tolist()
 
+a = 0.8
+b = 1.6
+d = 0.4
 epsabs = 0
-epsrel = 1e-3
+epsrel = 1e-6
 area = math.pi * a * b
-sys.stderr.write("area: %g\n" % area)
+Ksi = 20
 n = len(x)
 A = numpy.empty((n, n))
 for i in range(n):
