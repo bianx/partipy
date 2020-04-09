@@ -315,12 +315,18 @@ main(int argc, char **argv)
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
     }
+    if ((x = malloc(ncap * sizeof(*x))) == NULL) {
+	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+	exit(2);
+    }
+    if ((y = malloc(ncap * sizeof(*y))) == NULL) {
+	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+	exit(2);
+    }
     if ((ksi = malloc(ncap * sizeof(*ksi))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
     }
-    x = z;
-    y = &z[n];
     for (i = j = 0; i < n; i++) {
 	x[i] = buf[j++];
 	y[i] = buf[j++];
@@ -353,9 +359,8 @@ main(int argc, char **argv)
 	exit(2);
     }
     for (i = 0; ; i++) {
-      if (nremesh > 0 && i % nremesh == 0)
+      if (i > 0 && nremesh > 0 && i % nremesh == 0)
 	remesh(&remesh_param, &n, x, y, ksi);
-      fprintf(stderr, "n: %ld\n", n);
       if (every > 0 && i % every == 0) {
 	if (write(n, x, y, ksi, i) != 0) {
 	  fprintf(stderr, "%s: write failed\n", me);
@@ -364,12 +369,23 @@ main(int argc, char **argv)
 	grid(&remesh_param, n, x, y, ksi, i);
       }
       if (i == m) break;
+
+      for (j = 0; j < n; j++) {
+	z[j] = x[j];
+	z[j + n] = y[j];
+      }
       if (ode_step(ode, z) != 0) {
 	fprintf(stderr, "%s: ode_step failed\n", me);
 	exit(2);
       }
+      for (j = 0; j < n; j++) {
+	x[j] = z[j];
+	y[j] = z[j + n];
+      }
     }
     free(z);
+    free(x);
+    free(y);
     free(buf);
     free(ksi);
     ode_fin(ode);
@@ -960,7 +976,7 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
   coef = dx * dy;
   for (i = 0; i < m; i++)
     ksi[i] = ksi0[i] * coef;
-  
+
   l = 0;
   for (i = 0; i < nx; i++) {
       u = xlo + (i + 0.5) * dx;
@@ -1039,8 +1055,8 @@ remesh_psi(void * p0, int * pn, real * x, real * y, real * ksi) {
   }
   coef = dx * dy;
   for (i = 0; i < m; i++)
-    ksi[i] = ksi0[i] * coef;    
-  
+    ksi[i] = ksi0[i] * coef;
+
   l = 0;
   for (i = 0; i < nx; i++) {
       u = xlo + (i + 0.5) * dx;
@@ -1051,7 +1067,7 @@ remesh_psi(void * p0, int * pn, real * x, real * y, real * ksi) {
 	l++;
       }
   }
-  
+
   j = 0;
   for (i = 0; i < m; i++)
     if (fabs(ksi[i]) > eps) {
@@ -1060,8 +1076,7 @@ remesh_psi(void * p0, int * pn, real * x, real * y, real * ksi) {
       ksi[j] = ksi[i];
       j++;
     }
-    *pn = j;
-  *pn = m;
+  *pn = j;
   return 0;
 }
 
@@ -1113,7 +1128,7 @@ grid(void * p0, int n, const real * x, const real * y, const real * ksi, int ste
   for (k = 0; k < n; k++) {
     l = 0;
     for (j = 0; j < ny; j++) {
-	v = ylo + (j + 0.5) * dy;      
+	v = ylo + (j + 0.5) * dy;
 	for (i = 0; i < nx; i++) {
 	  u = xlo + (i + 0.5) * dx;
 	  ksi0[l] += ksi[k] * core->psi(x[k] - u, y[k] - v, core->param);
