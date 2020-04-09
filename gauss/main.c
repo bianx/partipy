@@ -159,7 +159,7 @@ main(int argc, char **argv)
     core = NULL;
     scheme = NULL;
     nremesh = 0;
-    remesh = remesh_psi;
+    remesh = remesh_m4;
 
     while (*++argv != NULL && argv[0][0] == '-')
 	switch (argv[0][1]) {
@@ -288,7 +288,7 @@ main(int argc, char **argv)
 	exit(2);
     }
 
-    ncap = 9990;
+    ncap = 99999;
     if ((buf = malloc(ncap * sizeof(*buf))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
@@ -345,13 +345,13 @@ main(int argc, char **argv)
     ode_param.dt = dt;
     ode_param.scheme = scheme;
 
-    remesh_param.nx = 3.2 / delta;
-    remesh_param.ny = 3.2 / delta;
+    remesh_param.nx = 3.2 / delta * 2;
+    remesh_param.ny = 3.2 / delta * 2;
     remesh_param.xlo = -1.6;
     remesh_param.xhi = 1.6;
     remesh_param.ylo = -1.6;
     remesh_param.yhi = 1.6;
-    remesh_param.eps = 1e-5;
+    remesh_param.eps = 1e-4;
     remesh_param.core = core;
 
     if (ode_ini(argv, &ode_param, &ode) != 0) {
@@ -359,7 +359,7 @@ main(int argc, char **argv)
 	exit(2);
     }
     for (i = 0; ; i++) {
-      if (i > 0 && nremesh > 0 && i % nremesh == 0)
+      if (nremesh > 0 && i % nremesh == 0)
 	remesh(&remesh_param, &n, x, y, ksi);
       if (every > 0 && i % every == 0) {
 	if (write(n, x, y, ksi, i) != 0) {
@@ -934,7 +934,7 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
   real coef;
   real dx;
   real dy;
-  real ksi0[9999];
+  real ksi0[999999];
   real u;
   real v;
   real xhi;
@@ -988,7 +988,7 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
       }
   }
 
-  /*j = 0;
+  j = 0;
   for (i = 0; i < m; i++)
     if (fabs(ksi[i]) > eps) {
       x[j] = x[i];
@@ -996,7 +996,7 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
       ksi[j] = ksi[i];
       j++;
     }
-    *pn = j; */
+  *pn = j;
   return 0;
 }
 
@@ -1014,7 +1014,7 @@ remesh_psi(void * p0, int * pn, real * x, real * y, real * ksi) {
   real coef;
   real dx;
   real dy;
-  real ksi0[9999];
+  real ksi0[999999];
   real u;
   real v;
   real xhi;
@@ -1093,7 +1093,7 @@ grid(void * p0, int n, const real * x, const real * y, const real * ksi, int ste
   real coef;
   real dx;
   real dy;
-  real ksi0[9999];
+  real ksi0[99999];
   real u;
   real v;
   real xhi;
@@ -1131,7 +1131,7 @@ grid(void * p0, int n, const real * x, const real * y, const real * ksi, int ste
 	v = ylo + (j + 0.5) * dy;
 	for (i = 0; i < nx; i++) {
 	  u = xlo + (i + 0.5) * dx;
-	  ksi0[l] += ksi[k] * core->psi(x[k] - u, y[k] - v, core->param);
+	  ksi0[l] += ksi[k] * gauss_psi(x[k] - u, y[k] - v, core->param);
 	  l++;
 	}
     }

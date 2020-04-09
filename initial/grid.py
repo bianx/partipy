@@ -108,4 +108,5 @@ for i in range(nx):
             print("%.16e %.16e %.16e" % (x, y, ksi))
             print("%.16e %.16e %.16e" % (x, -y, ksi))
             print("%.16e %.16e %.16e" % (-x, y, ksi))
-            print("%.16e %.16e %.16e" % (-x, -y, ksi))            
+            print("%.16e %.16e %.16e" % (-x, -y, ksi))
+            
