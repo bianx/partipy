@@ -88,8 +88,8 @@ else:
 
 xx = numpy.linspace(0, 1, nx + 1)
 yy = numpy.linspace(0, 1, ny + 1)
-#xx **= 0.7
-#yy **= 0.7
+xx **= 0.7
+yy **= 0.7
 xx *= a
 yy *= b
 

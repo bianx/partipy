@@ -169,7 +169,7 @@ main(int argc, char **argv)
     core = NULL;
     scheme = NULL;
     nremesh = 0;
-    remesh = remesh_m4;
+    remesh = remesh_psi;
     Grid = 0;
     while (*++argv != NULL && argv[0][0] == '-')
         switch (argv[0][1]) {
