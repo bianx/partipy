@@ -86,10 +86,11 @@ struct RemeshParam {
   struct Core *core;
 };
 static int ode_ini(char **, struct OdeParam *, struct Ode **);
-static int ode_step(struct Ode *, real * y);
+static int ode_step(struct Ode *, real * z);
 static int ode_fin(struct Ode *);
 
 static int remesh_m4(void *, int *, real *, real *, real *);
+static int remesh_psi(void *, int *, real *, real *, real *);
 
 struct PsiParam {
     real delta;
@@ -158,7 +159,7 @@ main(int argc, char **argv)
     core = NULL;
     scheme = NULL;
     nremesh = 0;
-    remesh = remesh_m4;
+    remesh = remesh_psi;
 
     while (*++argv != NULL && argv[0][0] == '-')
 	switch (argv[0][1]) {
@@ -287,7 +288,7 @@ main(int argc, char **argv)
 	exit(2);
     }
 
-    ncap = 1;
+    ncap = 9990;
     if ((buf = malloc(ncap * sizeof(*buf))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
@@ -310,11 +311,11 @@ main(int argc, char **argv)
 	}
 	n++;
     }
-    if ((z = malloc(2 * n * sizeof(*z))) == NULL) {
+    if ((z = malloc(2 * ncap * sizeof(*z))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
     }
-    if ((ksi = malloc(n * sizeof(*ksi))) == NULL) {
+    if ((ksi = malloc(ncap * sizeof(*ksi))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
     }
@@ -344,7 +345,7 @@ main(int argc, char **argv)
     remesh_param.xhi = 1.6;
     remesh_param.ylo = -1.6;
     remesh_param.yhi = 1.6;
-    remesh_param.eps = 1e-4;
+    remesh_param.eps = 1e-5;
     remesh_param.core = core;
 
     if (ode_ini(argv, &ode_param, &ode) != 0) {
@@ -352,6 +353,9 @@ main(int argc, char **argv)
 	exit(2);
     }
     for (i = 0; ; i++) {
+      if (nremesh > 0 && i % nremesh == 0)
+	remesh(&remesh_param, &n, x, y, ksi);
+      fprintf(stderr, "n: %ld\n", n);
       if (every > 0 && i % every == 0) {
 	if (write(n, x, y, ksi, i) != 0) {
 	  fprintf(stderr, "%s: write failed\n", me);
@@ -360,8 +364,6 @@ main(int argc, char **argv)
 	grid(&remesh_param, n, x, y, ksi, i);
       }
       if (i == m) break;
-      if (nremesh > 0 && i % nremesh == 0)
-	remesh(&remesh_param, &n, x, y, ksi);
       if (ode_step(ode, z) != 0) {
 	fprintf(stderr, "%s: ode_step failed\n", me);
 	exit(2);
@@ -956,6 +958,9 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
     }
   }
   coef = dx * dy;
+  for (i = 0; i < m; i++)
+    ksi[i] = ksi0[i] * coef;
+  
   l = 0;
   for (i = 0; i < nx; i++) {
       u = xlo + (i + 0.5) * dx;
@@ -963,12 +968,11 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
 	v = ylo + (j + 0.5) * dy;
 	x[l] = u;
 	y[l] = v;
-	ksi[l] = ksi0[l] * coef;
 	l++;
       }
   }
 
-  j = 0;
+  /*j = 0;
   for (i = 0; i < m; i++)
     if (fabs(ksi[i]) > eps) {
       x[j] = x[i];
@@ -976,7 +980,7 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
       ksi[j] = ksi[i];
       j++;
     }
-  *pn = j;
+    *pn = j; */
   return 0;
 }
 
@@ -1034,6 +1038,9 @@ remesh_psi(void * p0, int * pn, real * x, real * y, real * ksi) {
     }
   }
   coef = dx * dy;
+  for (i = 0; i < m; i++)
+    ksi[i] = ksi0[i] * coef;    
+  
   l = 0;
   for (i = 0; i < nx; i++) {
       u = xlo + (i + 0.5) * dx;
@@ -1041,12 +1048,20 @@ remesh_psi(void * p0, int * pn, real * x, real * y, real * ksi) {
 	v = ylo + (j + 0.5) * dy;
 	x[l] = u;
 	y[l] = v;
-	ksi[l] = ksi0[l] * coef;
 	l++;
       }
   }
-
-  *pn = n;
+  
+  j = 0;
+  for (i = 0; i < m; i++)
+    if (fabs(ksi[i]) > eps) {
+      x[j] = x[i];
+      y[j] = y[i];
+      ksi[j] = ksi[i];
+      j++;
+    }
+    *pn = j;
+  *pn = m;
   return 0;
 }
 

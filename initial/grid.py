@@ -3,6 +3,7 @@
 import sys
 import scipy.integrate
 import math
+import numpy
 
 def circle(y, x):
     return 1 if x ** 2 + y ** 2 < 1 else 0
@@ -68,7 +69,7 @@ elif shape == "circle":
 elif shape == "vorI":
     a = 0.8
     b = 2 * 0.8
-    nx = 20
+    nx = 10
     ny = 20
     vorticity = lambda x, y : vorI(x, y, a, b)
     Ksi = 20
@@ -76,7 +77,7 @@ elif shape == "vorI":
 elif shape == "vorII":
     a = 0.8
     b = 2 * 0.8
-    nx = 20
+    nx = 10
     ny = 20
     vorticity = lambda x, y : vorII(x, y, a, b)
     Ksi = 20
@@ -85,19 +86,23 @@ else:
     sys.stderr.write("%s: unknown shape '%s'\n" % (me, shape))
     sys.exit(2)
 
-# h = max(a, b) / nx
-dx = a / nx
-dy = b / ny
+xx = numpy.linspace(0, 1, nx + 1)
+yy = numpy.linspace(0, 1, ny + 1)
+#xx **= 0.7
+#yy **= 0.7
+xx *= a
+yy *= b
+
 for i in range(nx):
     for j in range(ny):
-        xl = i * dx
-        xh = (i + 1) * dx
-        yl = j * dy
-        yh = (j + 1) * dy
+        xl = xx[i]
+        xh = xx[i + 1]
+        yl = yy[j]
+        yh = yy[j + 1]
         ksi, err = scipy.integrate.dblquad(vorticity, xl, xh, yl, yh, (), epsabs, epsrel)
         x, err = scipy.integrate.dblquad(xavg, xl, xh, yl, yh, (vorticity,), epsabs, epsrel)
         y, err = scipy.integrate.dblquad(yavg, xl, xh, yl, yh, (vorticity,), epsabs, epsrel)
-        if ksi > small:
+        if ksi > 0:
             x /= ksi
             y /= ksi
             print("%.16e %.16e %.16e" % (x, y, ksi))
