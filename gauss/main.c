@@ -20,7 +20,9 @@ usg(void)
     exit(1);
 }
 
+struct Core;
 static int function(int n, const real *, real *, void *);
+static int particle(struct Core *, int n, const real * x, const real * y, const real * ksi, real *ksi0);
 
 static real gauss_psi(real, real, void *);
 static int gauss_dpsi(real, real, real *, real *, void *);
@@ -143,6 +145,7 @@ main(int argc, char **argv)
     real delta;
     real dt;
     real *ksi;
+    real *ksi0;
     real t1;
     real *x;
     real *y;
@@ -327,6 +330,10 @@ main(int argc, char **argv)
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
     }
+    if ((ksi0 = malloc(nmax * sizeof(*ksi))) == NULL) {
+	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+	exit(2);
+    }    
     for (i = j = 0; i < n; i++) {
 	x[i] = buf[j++];
 	y[i] = buf[j++];
@@ -361,11 +368,12 @@ main(int argc, char **argv)
       if (i > 0 && nremesh > 0 && i % nremesh == 0)
 	remesh(&remesh_param, &n, x, y, ksi);
       if (every > 0 && i % every == 0) {
-	if (write(n, x, y, ksi, i) != 0) {
+	particle(core, n, x, y, ksi, ksi0);
+	if (write(n, x, y, ksi0, i) != 0) {
 	  fprintf(stderr, "%s: write failed\n", me);
 	  exit(2);
 	}
-	grid(&remesh_param, n, x, y, ksi, i);
+	//grid(&remesh_param, n, x, y, ksi, i);
       }
       if (i == m) break;
 
@@ -1082,6 +1090,22 @@ remesh_psi(void * p0, int * pn, real * x, real * y, real * ksi) {
   *pn = j;
   return 0;
 }
+
+static int
+particle(struct Core *core, int n, const real * x, const real * y, const real * ksi, real *ksi0) {
+  int i;
+  int j;
+  if (core->psi == NULL)
+    return 0;
+
+  for (i = 0; i < n; i++) {
+    ksi0[i] = 0;
+    for (j = 0; j < n; j++)
+	  ksi0[i] += ksi[i] * core->psi(x[i] - x[j], y[i] - y[j], core->param);
+  }
+  return 0;
+}
+
 
 static int
 grid(void * p0, int n, const real * x, const real * y, const real * ksi, int step) {
