@@ -350,7 +350,7 @@ main(int argc, char **argv)
     remesh_param.xhi = 1.6;
     remesh_param.ylo = -1.6;
     remesh_param.yhi = 1.6;
-    remesh_param.eps = 1e-4;
+    remesh_param.eps = 1e-5;
     remesh_param.core = core;
 
     if (ode_ini(argv, &ode_param, &ode) != 0) {
