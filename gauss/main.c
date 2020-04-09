@@ -9,6 +9,7 @@
 
 #define pi (3.141592653589793)
 static char me[] = "gauss/main";
+enum { nmax = 99999 };
 
 static void
 usg(void)
@@ -19,7 +20,7 @@ usg(void)
     exit(1);
 }
 
-static int function(const real *, real *, void *);
+static int function(int n, const real *, real *, void *);
 
 static real gauss_psi(real, real, void *);
 static int gauss_dpsi(real, real, real *, real *, void *);
@@ -69,8 +70,7 @@ static int gnuplot_write(int n, const real *, const real *, const real *,
 
 struct Ode;
 struct OdeParam {
-    int n;
-    int (*function)(const real *, real *, void *);
+    int (*function)(int n, const real *, real *, void *);
     void *param;
     real dt;
     const char *scheme;
@@ -86,7 +86,7 @@ struct RemeshParam {
   struct Core *core;
 };
 static int ode_ini(char **, struct OdeParam *, struct Ode **);
-static int ode_step(struct Ode *, real * z);
+static int ode_step(struct Ode *, int n, real * z);
 static int ode_fin(struct Ode *);
 
 static int remesh_m4(void *, int *, real *, real *, real *);
@@ -159,7 +159,7 @@ main(int argc, char **argv)
     core = NULL;
     scheme = NULL;
     nremesh = 0;
-    remesh = remesh_m4;
+    remesh = remesh_psi;
 
     while (*++argv != NULL && argv[0][0] == '-')
 	switch (argv[0][1]) {
@@ -288,8 +288,8 @@ main(int argc, char **argv)
 	exit(2);
     }
 
-    ncap = 99999;
-    if ((buf = malloc(ncap * sizeof(*buf))) == NULL) {
+    ncap = 1;
+    if ((buf = malloc(nmax * sizeof(*buf))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
     }
@@ -311,19 +311,19 @@ main(int argc, char **argv)
 	}
 	n++;
     }
-    if ((z = malloc(2 * ncap * sizeof(*z))) == NULL) {
+    if ((z = malloc(2 * nmax * sizeof(*z))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
     }
-    if ((x = malloc(ncap * sizeof(*x))) == NULL) {
+    if ((x = malloc(nmax * sizeof(*x))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
     }
-    if ((y = malloc(ncap * sizeof(*y))) == NULL) {
+    if ((y = malloc(nmax * sizeof(*y))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
     }
-    if ((ksi = malloc(ncap * sizeof(*ksi))) == NULL) {
+    if ((ksi = malloc(nmax * sizeof(*ksi))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	exit(2);
     }
@@ -339,7 +339,6 @@ main(int argc, char **argv)
     param.core = core;
     param.ksi = ksi;
     dt = t1 / (m - 1);
-    ode_param.n = 2 * n;
     ode_param.function = function;
     ode_param.param = &param;
     ode_param.dt = dt;
@@ -359,7 +358,7 @@ main(int argc, char **argv)
 	exit(2);
     }
     for (i = 0; ; i++) {
-      if (nremesh > 0 && i % nremesh == 0)
+      if (i > 0 && nremesh > 0 && i % nremesh == 0)
 	remesh(&remesh_param, &n, x, y, ksi);
       if (every > 0 && i % every == 0) {
 	if (write(n, x, y, ksi, i) != 0) {
@@ -374,7 +373,7 @@ main(int argc, char **argv)
 	z[j] = x[j];
 	z[j + n] = y[j];
       }
-      if (ode_step(ode, z) != 0) {
+      if (ode_step(ode, 2 * n, z) != 0) {
 	fprintf(stderr, "%s: ode_step failed\n", me);
 	exit(2);
       }
@@ -392,7 +391,7 @@ main(int argc, char **argv)
 }
 
 static int
-function(const real * z, real * f, void *params0)
+function(int n, const real * z, real * f, void *params0)
 {
     const real *ksi;
     const real *x;
@@ -406,12 +405,10 @@ function(const real * z, real * f, void *params0)
     real coef;
     int i;
     int j;
-    int n;
     struct Param *params;
     struct Core *core;
 
     params = params0;
-    n = params->n;
     core = params->core;
     ksi = params->ksi;
     coef = core->coef(core->param);
@@ -751,26 +748,25 @@ krasny_dpsi(real x, real y, real * u, real * v, void *p0)
 }
 
 struct Ode {
-    int n;
-    int (*function)(const real *, real *, void *);
+    int (*function)(int n, const real *, real *, void *);
     void *param;
     real dt;
     real *k;
 
     real *y0;
     real *ytmp;
-    int (*step)(struct Ode *, real *);
+    int (*step)(struct Ode *, int n, real *);
 };
 
-static int step_euler(struct Ode *, real *);
-static int step_rk4(struct Ode *, real *);
+static int step_euler(struct Ode *, int n, real *);
+static int step_rk4(struct Ode *, int n, real *);
 
 static const char *OdeName[] = {
     "euler",
     "rk4",
 };
 
-static int (*const OdeStep[])(struct Ode *, real *) = {
+static int (*const OdeStep[])(struct Ode *, int n, real *) = {
     step_euler,
     step_rk4,
 };
@@ -789,15 +785,15 @@ ode_ini(char **argv, struct OdeParam *p, struct Ode **pq)
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	return 1;
     }
-    if ((k = malloc(p->n * sizeof(*k))) == NULL) {
+    if ((k = malloc(nmax * sizeof(*k))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	return 1;
     }
-    if ((y0 = malloc(p->n * sizeof(*y0))) == NULL) {
+    if ((y0 = malloc(nmax * sizeof(*y0))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	return 1;
     }
-    if ((ytmp = malloc(p->n * sizeof(*ytmp))) == NULL) {
+    if ((ytmp = malloc(nmax * sizeof(*ytmp))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
 	return 1;
     }
@@ -815,7 +811,6 @@ ode_ini(char **argv, struct OdeParam *p, struct Ode **pq)
     q->dt = p->dt;
     q->k = k;
     q->function = p->function;
-    q->n = p->n;
     q->param = p->param;
     q->y0 = y0;
     q->ytmp = ytmp;
@@ -827,9 +822,9 @@ ode_ini(char **argv, struct OdeParam *p, struct Ode **pq)
 }
 
 static int
-ode_step(struct Ode *q, real * y)
+ode_step(struct Ode *q, int n, real * y)
 {
-    return q->step(q, y);
+  return q->step(q, n, y);
 }
 
 static int
@@ -843,7 +838,7 @@ ode_fin(struct Ode *q)
 }
 
 static int
-step_euler(struct Ode *q, real * y)
+step_euler(struct Ode *q, int n, real * y)
 {
     real *k;
     real dt;
@@ -851,32 +846,30 @@ step_euler(struct Ode *q, real * y)
 
     k = q->k;
     dt = q->dt;
-    if (q->function(y, k, q->param) != 0) {
+    if (q->function(n/2, y, k, q->param) != 0) {
 	fprintf(stderr, "%s:%d: function failed\n", __FILE__, __LINE__);
 	return 1;
     }
-    for (i = 0; i < q->n; i++)
+    for (i = 0; i < n; i++)
 	y[i] += dt * k[i];
     return 0;
 }
 
 static int
-step_rk4(struct Ode *q, real * y)
+step_rk4(struct Ode *q, int n, real * y)
 {
     real h;
     real *k;
     real *y0;
     real *ytmp;
     int i;
-    int n;
 
 #define EVAL(y, k) \
-  if (q->function((y), (k), q->param) != 0) {			     \
+    if (q->function((n)/2, (y), (k), q->param) != 0) {			     \
     fprintf(stderr, "%s:%d: function failed\n", __FILE__, __LINE__); \
     return 1; \
   } \
 
-    n = q->n;
     k = q->k;
     y0 = q->y0;
     ytmp = q->ytmp;
@@ -934,7 +927,7 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
   real coef;
   real dx;
   real dy;
-  real ksi0[999999];
+  real ksi0[99999];
   real u;
   real v;
   real xhi;
@@ -942,7 +935,6 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
   real yhi;
   real ylo;
   real eps;
-  struct Core *core;
   struct RemeshParam *p;
 
   n = *pn;
@@ -953,7 +945,6 @@ remesh_m4(void * p0, int * pn, real * x, real * y, real * ksi) {
   xhi = p->xhi;
   ylo = p->ylo;
   yhi = p->yhi;
-  core = p->core;
   eps = p->eps;
 
   dx = (xhi - xlo) / nx;
@@ -1100,7 +1091,6 @@ grid(void * p0, int n, const real * x, const real * y, const real * ksi, int ste
   real xlo;
   real yhi;
   real ylo;
-  real eps;
   int status;
   char path[SIZE];
   struct Core *core;
@@ -1114,7 +1104,6 @@ grid(void * p0, int n, const real * x, const real * y, const real * ksi, int ste
   ylo = p->ylo;
   yhi = p->yhi;
   core = p->core;
-  eps = p->eps;
 
   if (core->psi == NULL)
     return 0;
