@@ -21,6 +21,9 @@ static double dblint(double (*f)(double, double, void *), void *, double r,
 static double cross(double, double, void *);
 static double lin(double r, double phi, void *p0);
 static double gauss(double);
+static double chorin(double);
+static double hald(double);
+static double j2(double);
 
 static const double q = 2.56085;
 static const double Ksi = 20.0;
@@ -33,11 +36,14 @@ struct CrossParam {
   double yi;
   double xj;
   double yj;
+  double (*psi)(double);  
 };
 
 struct LinParam {
   double x;
   double y;
+  double (*vor)(double, double);
+  double (*psi)(double);
 };
 
 static double f(double z, double q)
@@ -45,7 +51,7 @@ static double f(double z, double q)
   return exp(-(q/z)*exp(1/(z - 1)));
 }
 
-static double vort(double x, double y)
+static double vorI(double x, double y)
 {
   double r;
   x /= a;
@@ -57,21 +63,26 @@ static double vort(double x, double y)
     return 0;
 }
 
+static double vorConst(double x, double y)
+{
+  return Ksi;
+}
+
 int
 main(int argc, char **argv)
 {
-    (void) argc;
     char line[SIZE];
     double *A;
     double *B;
     double *C;
+    double gamma;
     double *invC;
     double *Ksi;
     double *x;
     double *y;
-    gsl_matrix_view vInvC;
     gsl_matrix_view vA;
     gsl_matrix_view vC;
+    gsl_matrix_view vInvC;
     gsl_permutation *p;
     gsl_vector_view vB;
     gsl_vector_view vKsi;
@@ -81,9 +92,15 @@ main(int argc, char **argv)
     int n;
     int ncap;
     int s;
+    int Verbose;
     struct CrossParam cross_param;
     struct LinParam lin_param;
-
+    (void) argc;
+    
+    gamma = 0;
+    lin_param.vor = vorConst;
+    lin_param.psi = cross_param.psi = hald;
+    Verbose = getenv("LOG") != NULL;
     while (*++argv != NULL && argv[0][0] == '-')
 	switch (argv[0][1]) {
 	case 'h':
@@ -144,6 +161,8 @@ main(int argc, char **argv)
 	exit(2);
     }
     for (i = 0; i < n; i++) {
+      if (Verbose)
+	fprintf(stderr, "%s: %04d of %04d\n", me, i, n);
       for (j = i; j < n; j++) {
 	cross_param.xi = x[i];
 	cross_param.yi = y[i];
@@ -157,14 +176,14 @@ main(int argc, char **argv)
       lin_param.y = y[i];
       B[i] = a * b * dblint(lin, &lin_param, 0, 1, 0, 2 * pi);
     }
-
     for (i = 0; i < n; i++)
       for (j = 0; j < n; j++) {
 	C[j + i * n] = 0;
 	for (k = 0; k < n; k++)
-	  C[j + i * n] += A[i + k * n] * A[k + j * n];
+	  C[j + i * n] += A[i + k * n] * A[j + k * n];
       }
-
+    for (i = 0; i < n; i++)
+      C[i + i * n] += gamma;
     vA = gsl_matrix_view_array(A, n, n);
     vB = gsl_vector_view_array(B, n);
     vC = gsl_matrix_view_array(C, n, n);
@@ -176,21 +195,14 @@ main(int argc, char **argv)
     }
     gsl_linalg_LU_decomp(&vC.matrix, p, &s);
     gsl_linalg_LU_invert(&vC.matrix, p, &vInvC.matrix);
-
-    gsl_linalg_LU_decomp(&vA.matrix, p, &s);
-    gsl_linalg_LU_solve(&vA.matrix, p, &vB.vector, &vKsi.vector);
-
-    /* ik : Cij Ajk bk */
     for (i = 0; i < n; i++) {
       Ksi[i] = 0;
       for (j = 0; j < n; j++)
 	for (k = 0; k < n; k++)
 	  Ksi[i] += invC[j + i * n] * A[k + j * n] * B[k];
     }
-
-	     /* for (i = 0; i < n; i++)
-		printf ("%.16e %.16e %.16e\n", x[i], y[i], Ksi[i]); */
-
+    for (i = 0; i < n; i++)
+       printf ("%.16e %.16e %.16e\n", x[i], y[i], Ksi[i]);
     gsl_permutation_free(p);
     free(x);
     free(y);
@@ -224,7 +236,7 @@ cross(double r, double phi, void *p0)
   ri = sqrt(xi*xi + yi*yi);
   rj = sqrt(xj*xj + yj*yj);
 
-  return r * gauss(ri) * gauss(rj);
+  return r * p->psi(ri) * p->psi(rj);
 }
 
 static double
@@ -243,9 +255,8 @@ lin(double r, double phi, void *p0)
   xi = x - p->x;
   yi = y - p->y;
   ri = sqrt(xi*xi + yi*yi);
-  return r * vort(x, y) * gauss(ri);
+  return r * p->vor(x, y) * p->psi(ri);
 }
-
 
 static double
 dblint(double (*f)(double, double, void *), void *param, double a,
@@ -288,4 +299,30 @@ gauss(double r)
     double d2;
     d2 = delta * delta;
     return exp(-r * r / d2) / (pi * d2);
+}
+
+static double
+chorin(double r)
+{
+  double d3;
+  d3 = delta * delta * delta;
+  return r < delta ? 3 * r / (2 * pi * d3) : 0;
+}
+
+static double
+hald(double r)
+{
+    double ans;
+    r /= delta;
+    if (r < 0.001)
+      ans = 15/8.0 - 21*r*r/32.0;
+    else
+      ans = 1/(r*r) * (4 * j2(2 * r) - j2(r));
+    return ans / (3 * pi * delta * delta);
+}
+
+static double
+j2(double x)
+{
+  return jn(2, x);
 }
