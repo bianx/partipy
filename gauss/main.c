@@ -1045,21 +1045,21 @@ remesh_m4(void *p0, int *pn, real * x, real * y, real * ksi)
     int j;
     int k;
     int l;
-    int n;
     int m;
+    int n;
     int nx;
     int ny;
     real coef;
     real dx;
     real dy;
-    real ksi0[99999];
+    real eps;
+    real *ksi0;
     real u;
     real v;
     real xhi;
     real xlo;
     real yhi;
     real ylo;
-    real eps;
     struct RemeshParam *p;
 
     n = *pn;
@@ -1075,6 +1075,10 @@ remesh_m4(void *p0, int *pn, real * x, real * y, real * ksi)
     dx = (xhi - xlo) / nx;
     dy = (yhi - ylo) / ny;
     m = nx * ny;
+    if ((ksi0 = malloc(m * sizeof(*ksi0))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
     for (i = 0; i < m; i++)
         ksi0[i] = 0;
 
@@ -1120,6 +1124,7 @@ remesh_m4(void *p0, int *pn, real * x, real * y, real * ksi)
             j++;
         }
     *pn = j;
+    free(ksi0);
     return 0;
 }
 
