@@ -3,118 +3,69 @@ import numpy as np
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import csv
-#import matplotlib.tri as tri
+import matplotlib.tri as tri
 import os, subprocess
 
-inputdir = '../gauss/vor_i_output_gnuplot/'
-#data_path = '../gauss/vor_i_output_gnuplot/000002.dat'
+#inputdir = '../gauss/vor_i_output_gnuplot/'
+inputdir = '../gauss/tt'
+#inputdir = os.getcwd()
+print(inputdir)
 
+nx=80
+ny=80
+tot=nx*ny
 
-npts=1216
-count=0;
+x=np.zeros((ny, nx))
+y=np.zeros((ny, nx))
+z=np.zeros((ny, nx))
+
+npts = 2508
+fcount = 0
+fmax   = 136
+
 files = os.listdir(inputdir)
 files.sort()
+#data_path = '000074.grid'
+
+
+zmin=0
+zmax=3.2e-2
+lev = np.linspace(zmin, zmax, 21)
+#print(lev)
 
 for file in files:
-    data_path=inputdir+file
-    print ('processing file :', data_path)
+    #print (file)
+    if file.endswith('.grid'):
+    
+        fcount = fcount+1
+        if fcount > fmax:
+            break
+    
+        data_path=inputdir+'/'+file
+        print ('processing file :', data_path)
 
-    x = []
-    y = []
-    z = []
-
-    count=count+1
-    if count > 2:
-        break
         
-# read data
-    with open(data_path, 'r') as file:
-        data = csv.reader(file, delimiter=' ')
-        for row in data:
-            x.append(float(row[0]))
-            y.append(float(row[1]))
-            z.append(float(row[2]))
-        
-    #print (x)
+        #read data
+        line_count=0
+        with open(data_path, 'r') as file:
+            data = csv.reader(file, delimiter=' ')
+            for row in data:
+                ix = int(line_count/ny)
+                iy = line_count%ny
+                #print(line_count, ix, iy)
+                x[ix, iy]=float(row[0])
+                y[ix, iy]=float(row[1])
+                z[ix, iy]=float(row[2])
+                line_count += 1
 
-# ----------
-# Tricontour
-# ----------
-# Directly supply the unordered, irregularly spaced coordinates
-# to tricontour.
-    fig, ax = plt.subplots()
-
-    ax.tricontour(x, y, z, levels=20, linewidths=0.5, colors='k')
-    #cntr = ax.tricontourf(x, y, z, levels=14, cmap="RdBu_r")
-
-    #fig.colorbar(cntr, ax)
-    #ax.plot(x, y, 'ko', ms=0.5)
-    ax.set(xlim=(-2.5, 2.5), ylim=(-2.5, 2.5))
-    ax.set_title('tricontour (%d points)' % npts)
-
-    output=str(count)+'.pdf'
-    #plt.subplots_adjust(hspace=0.5)
-    plt.show()
-    print("outputing to "+output+"\n")
-    plt.savefig(output)
-import matplotlib
-import numpy as np
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-import csv
-#import matplotlib.tri as tri
-import os, subprocess
-
-inputdir = '../gauss/vor_i_output_gnuplot/'
-#data_path = '../gauss/vor_i_output_gnuplot/000002.dat'
-
-
-npts=1216
-count=0
-max=10
-files = os.listdir(inputdir)
-files.sort()
-
-for file in files:
-    data_path=inputdir+file
-    print ('processing file :', data_path)
-
-    x = []
-    y = []
-    z = []
-
-    count=count+1
-    if count > max:
-        break
-        
-# read data
-    with open(data_path, 'r') as file:
-        data = csv.reader(file, delimiter=' ')
-        for row in data:
-            x.append(float(row[0]))
-            y.append(float(row[1]))
-            z.append(float(row[2]))
-        
-    #print (x)
-
-# ----------
-# Tricontour
-# ----------
-# Directly supply the unordered, irregularly spaced coordinates
-# to tricontour.
-    fig, ax = plt.subplots()
-
-    ax.tricontour(x, y, z, levels=20, linewidths=0.5, colors='k')
-    #cntr = ax.tricontourf(x, y, z, levels=14, cmap="RdBu_r")
-
-    #fig.colorbar(cntr, ax)
-    #ax.plot(x, y, 'ko', ms=0.5)
-    ax.set(xlim=(-2.5, 2.5), ylim=(-2.5, 2.5))
-    ax.set_title('tricontour (%d points)' % npts)
-
-    output=str(count).zfill(6)+'.png'
-    print("output to "+output+"\n")
-    #fig=plt.figure()
-    #plt.subplots_adjust(hspace=0.5)
-    plt.show()
-    fig.savefig(output)
+        fig, ax = plt.subplots()
+        #ax.plot(x, y, 'ko', ms=1) #show grid points
+        ax.set(xlim=(-2.5, 2.5), ylim=(-2.5, 2.5))
+        cp = ax.contour(x, y, z, levels=lev)
+        fig.colorbar(cp) # Add a colorbar to a plot
+        #ax.clabel(cp, inline=1, fontsize=10)
+        title="Contour with grid " + str(nx) + '*' + str(ny)
+        ax.set_title(title)
+        output=str(fcount-1).zfill(6)+'.png'
+        print("output to "+output+"\n")
+        fig.savefig(output)
