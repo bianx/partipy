@@ -17,7 +17,7 @@ usg(void)
 }
 
 static double dblint(double (*f)(double, double, void *), void *, double r,
-		     double s, double a, double b);
+                     double s, double a, double b);
 static double zero(double r, double phi, void *p0);
 static double cross(double, double, void *);
 static double lin(double r, double phi, void *p0);
@@ -33,62 +33,64 @@ static const double b = 2 * 0.8;
 static const double delta = 0.3;
 
 struct CrossParam {
-  double xi;
-  double yi;
-  double xj;
-  double yj;
-  double (*psi)(double);  
+    double xi;
+    double yi;
+    double xj;
+    double yj;
+    double (*psi)(double);
 };
 
 struct LinParam {
-  double x;
-  double y;
-  double (*vor)(double, double);
-  double (*psi)(double);
+    double x;
+    double y;
+    double (*vor)(double, double);
+    double (*psi)(double);
 };
 
 struct ZeroParam {
-  double (*vor)(double, double);
+    double (*vor)(double, double);
 };
 
 static double
 f(double z, double q)
 {
-  return exp(-(q/z)*exp(1/(z - 1)));
+    return exp(-(q / z) * exp(1 / (z - 1)));
 }
 
 static double
 vorI(double x, double y)
 {
-  double r;
-  x /= a;
-  y /= b;
-  r = sqrt(x*x + y*y);
-  if (r < 1)
-    return Ksi * (1 - f(r, q));
-  else
-    return 0;
+    double r;
+
+    x /= a;
+    y /= b;
+    r = sqrt(x * x + y * y);
+    if (r < 1)
+        return Ksi * (1 - f(r, q));
+    else
+        return 0;
 }
 
 static double
 vorII(double x, double y)
 {
-  double r;
-  x /= a;
-  y /= b;
-  r = sqrt(x*x + y*y);
-  if (r < 1)
-    return Ksi * (1 - r*r*r*r);
-  else
-    return 0;
+    double r;
+
+    x /= a;
+    y /= b;
+    r = sqrt(x * x + y * y);
+    if (r < 1)
+        return Ksi * (1 - r * r * r * r);
+    else
+        return 0;
 }
 
 static double
 vorConst(double x, double y)
 {
-  (void)x;
-  (void)y;
-  return Ksi;
+    (void) x;
+    (void) y;
+    return Ksi;
 }
 
 int
@@ -116,118 +118,121 @@ main(int argc, char **argv)
     struct CrossParam cross_param;
     struct LinParam lin_param;
     struct ZeroParam zero_param;
+
     (void) argc;
-    
+
     gamma = 0.1;
     lin_param.vor = zero_param.vor = vorConst;
     lin_param.psi = cross_param.psi = gauss;
     Verbose = getenv("LOG") != NULL;
     while (*++argv != NULL && argv[0][0] == '-')
-	switch (argv[0][1]) {
-	case 'h':
-	    usg();
-	    break;
-	default:
-	    fprintf(stderr, "%s: unknown option '%s'\n", me, argv[0]);
-	    exit(2);
-	}
+        switch (argv[0][1]) {
+        case 'h':
+            usg();
+            break;
+        default:
+            fprintf(stderr, "%s: unknown option '%s'\n", me, argv[0]);
+            exit(2);
+        }
     ncap = 1;
     if ((x = malloc(ncap * sizeof(*x))) == NULL) {
-	fprintf(stderr, "%s: malloc failed\n", me);
-	exit(2);
+        fprintf(stderr, "%s: malloc failed\n", me);
+        exit(2);
     }
     if ((y = malloc(ncap * sizeof(*y))) == NULL) {
-	fprintf(stderr, "%s: malloc failed\n", me);
-	exit(2);
+        fprintf(stderr, "%s: malloc failed\n", me);
+        exit(2);
     }
 
     i = 0;
     while (fgets(line, SIZE, stdin) != NULL) {
-	if (i == ncap) {
-	    ncap *= 2;
-	    if ((x = realloc(x, ncap * sizeof(*x))) == NULL) {
-		fprintf(stderr, "%s: realloc failed\n", me);
-		exit(2);
-	    }
-	    if ((y = realloc(y, ncap * sizeof(*y))) == NULL) {
-		fprintf(stderr, "%s: realloc failed\n", me);
-		exit(2);
-	    }
-	}
-	if (sscanf(line, "%lf %lf", &x[i], &y[i]) != 2) {
-	    fprintf(stderr, "%s: fail to parse '%s'\n", line, me);
-	    exit(2);
-	}
-	i++;
+        if (i == ncap) {
+            ncap *= 2;
+            if ((x = realloc(x, ncap * sizeof(*x))) == NULL) {
+                fprintf(stderr, "%s: realloc failed\n", me);
+                exit(2);
+            }
+            if ((y = realloc(y, ncap * sizeof(*y))) == NULL) {
+                fprintf(stderr, "%s: realloc failed\n", me);
+                exit(2);
+            }
+        }
+        if (sscanf(line, "%lf %lf", &x[i], &y[i]) != 2) {
+            fprintf(stderr, "%s: fail to parse '%s'\n", line, me);
+            exit(2);
+        }
+        i++;
     }
     n = i;
 
     /* Mean = a * b * dblint(zero, &zero_param, 0, 1, 0, 2 * pi) / n;
-       fprintf(stderr, "Vorticity: %.16g\n", Mean);*/
-    
+       fprintf(stderr, "Vorticity: %.16g\n", Mean); */
+
     if ((A = malloc(n * n * sizeof(*A))) == NULL) {
-	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
-	exit(2);
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
     }
     if ((B = malloc(n * sizeof(*B))) == NULL) {
-	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
-	exit(2);
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
     }
     if ((C = malloc(n * n * sizeof(*C))) == NULL) {
-	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
-	exit(2);
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
     }
     if ((invC = malloc(n * n * sizeof(*invC))) == NULL) {
-	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
-	exit(2);
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
     }
     if ((Ksi = malloc(n * sizeof(*Ksi))) == NULL) {
-	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
-	exit(2);
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
     }
     for (i = 0; i < n; i++) {
-      if (Verbose)
-	fprintf(stderr, "%s: %04d of %04d\n", me, i, n);
-      for (j = i; j < n; j++) {
-	cross_param.xi = x[i];
-	cross_param.yi = y[i];
-	cross_param.xj = x[j];
-	cross_param.yj = y[j];
-	A[j + i * n] = A[i + j * n] = a * b * dblint(cross, &cross_param, 0, 1, 0, 2 * pi);
-      }
+        if (Verbose)
+            fprintf(stderr, "%s: %04d of %04d\n", me, i, n);
+        for (j = i; j < n; j++) {
+            cross_param.xi = x[i];
+            cross_param.yi = y[i];
+            cross_param.xj = x[j];
+            cross_param.yj = y[j];
+            A[j + i * n] = A[i + j * n] =
+                a * b * dblint(cross, &cross_param, 0, 1, 0, 2 * pi);
+        }
     }
     for (i = 0; i < n; i++) {
-      lin_param.x = x[i];
-      lin_param.y = y[i];
-      B[i] = a * b * dblint(lin, &lin_param, 0, 1, 0, 2 * pi);
+        lin_param.x = x[i];
+        lin_param.y = y[i];
+        B[i] = a * b * dblint(lin, &lin_param, 0, 1, 0, 2 * pi);
     }
     /* for (i = 0; i < n; i++)
-      for (j = 0; j < n; j++)
-      B[i] -= Mean * A[j + i * n]; */
+       for (j = 0; j < n; j++)
+       B[i] -= Mean * A[j + i * n]; */
     for (i = 0; i < n; i++)
-      for (j = 0; j < n; j++) {
-	C[j + i * n] = 0;
-	for (k = 0; k < n; k++)
-	  C[j + i * n] += A[i + k * n] * A[j + k * n];
-      }
+        for (j = 0; j < n; j++) {
+            C[j + i * n] = 0;
+            for (k = 0; k < n; k++)
+                C[j + i * n] += A[i + k * n] * A[j + k * n];
+        }
     for (i = 0; i < n; i++)
-      C[i + i * n] += gamma;
+        C[i + i * n] += gamma;
     vC = gsl_matrix_view_array(C, n, n);
     vInvC = gsl_matrix_view_array(invC, n, n);
     if ((p = gsl_permutation_alloc(n)) == NULL) {
-      fprintf(stderr, "%s:%d: gsl_permutation_alloc failed\n", __FILE__, __LINE__);
-      exit(1);
+        fprintf(stderr, "%s:%d: gsl_permutation_alloc failed\n", __FILE__,
+                __LINE__);
+        exit(1);
     }
     gsl_linalg_LU_decomp(&vC.matrix, p, &s);
     gsl_linalg_LU_invert(&vC.matrix, p, &vInvC.matrix);
     for (i = 0; i < n; i++) {
-      Ksi[i] = 0;
-      for (j = 0; j < n; j++)
-	for (k = 0; k < n; k++)
-	  Ksi[i] += invC[j + i * n] * A[k + j * n] * B[k];
+        Ksi[i] = 0;
+        for (j = 0; j < n; j++)
+            for (k = 0; k < n; k++)
+                Ksi[i] += invC[j + i * n] * A[k + j * n] * B[k];
     }
     for (i = 0; i < n; i++)
-       printf ("%.16e %.16e %.16e\n", x[i], y[i], Ksi[i]);
+        printf("%.16e %.16e %.16e\n", x[i], y[i], Ksi[i]);
     gsl_permutation_free(p);
     free(x);
     free(y);
@@ -241,59 +246,59 @@ main(int argc, char **argv)
 static double
 cross(double r, double phi, void *p0)
 {
-  double x;
-  double y;
-  double xi;
-  double yi;
-  double xj;
-  double yj;
-  double ri;
-  double rj;
-  struct CrossParam *p;
+    double x;
+    double y;
+    double xi;
+    double yi;
+    double xj;
+    double yj;
+    double ri;
+    double rj;
+    struct CrossParam *p;
 
-  p = p0;
-  x = a * r * cos(phi);
-  y = b * r * sin(phi);
-  xi = x - p->xi;
-  yi = y - p->yi;
-  xj = x - p->xj;
-  yj = y - p->yj;
-  ri = sqrt(xi*xi + yi*yi);
-  rj = sqrt(xj*xj + yj*yj);
+    p = p0;
+    x = a * r * cos(phi);
+    y = b * r * sin(phi);
+    xi = x - p->xi;
+    yi = y - p->yi;
+    xj = x - p->xj;
+    yj = y - p->yj;
+    ri = sqrt(xi * xi + yi * yi);
+    rj = sqrt(xj * xj + yj * yj);
 
-  return r * p->psi(ri) * p->psi(rj);
+    return r * p->psi(ri) * p->psi(rj);
 }
 
 static double
 lin(double r, double phi, void *p0)
 {
-  double x;
-  double y;
-  double xi;
-  double yi;
-  double ri;
-  struct LinParam *p;
+    double x;
+    double y;
+    double xi;
+    double yi;
+    double ri;
+    struct LinParam *p;
 
-  p = p0;
-  x = a * r * cos(phi);
-  y = b * r * sin(phi);
-  xi = x - p->x;
-  yi = y - p->y;
-  ri = sqrt(xi*xi + yi*yi);
-  return r * p->vor(x, y) * p->psi(ri);
+    p = p0;
+    x = a * r * cos(phi);
+    y = b * r * sin(phi);
+    xi = x - p->x;
+    yi = y - p->y;
+    ri = sqrt(xi * xi + yi * yi);
+    return r * p->vor(x, y) * p->psi(ri);
 }
 
 static double
 zero(double r, double phi, void *p0)
 {
-  double x;
-  double y;
-  struct ZeroParam *p;
+    double x;
+    double y;
+    struct ZeroParam *p;
 
-  p = p0;
-  x = a * r * cos(phi);
-  y = b * r * sin(phi);
-  return r * p->vor(x, y);
+    p = p0;
+    x = a * r * cos(phi);
+    y = b * r * sin(phi);
+    return r * p->vor(x, y);
 }
 
 static double
@@ -319,13 +324,13 @@ dblint(double (*f)(double, double, void *), void *param, double a,
     sum = 0;
 
     for (i = 0; i < n + 1; i++) {
-	x = a + dx * i;
-	k = (i == 0 || i == n) ? 1 : (i % 2 == 0) ? 2 : 4;
-	for (j = 0; j < m + 1; j++) {
-	    l = (j == 0 || j == m) ? 1 : (j % 2 == 0) ? 2 : 4;
-	    y = s + dy * j;
-	    sum += f(x, y, param) * k * l;
-	}
+        x = a + dx * i;
+        k = (i == 0 || i == n) ? 1 : (i % 2 == 0) ? 2 : 4;
+        for (j = 0; j < m + 1; j++) {
+            l = (j == 0 || j == m) ? 1 : (j % 2 == 0) ? 2 : 4;
+            y = s + dy * j;
+            sum += f(x, y, param) * k * l;
+        }
     }
     return dx * dy * sum / 9;
 
@@ -335,6 +340,7 @@ static double
 gauss(double r)
 {
     double d2;
+
     d2 = delta * delta;
     return exp(-r * r / d2) / (pi * d2);
 }
@@ -342,25 +348,27 @@ gauss(double r)
 static double
 chorin(double r)
 {
-  double d3;
-  d3 = delta * delta * delta;
-  return r < delta ? 3 * r / (2 * pi * d3) : 0;
+    double d3;
+
+    d3 = delta * delta * delta;
+    return r < delta ? 3 * r / (2 * pi * d3) : 0;
 }
 
 static double
 hald(double r)
 {
     double ans;
+
     r /= delta;
     if (r < 0.001)
-      ans = 15/8.0 - 21*r*r/32.0;
+        ans = 15 / 8.0 - 21 * r * r / 32.0;
     else
-      ans = 1/(r*r) * (4 * j2(2 * r) - j2(r));
+        ans = 1 / (r * r) * (4 * j2(2 * r) - j2(r));
     return ans / (3 * pi * delta * delta);
 }
 
 static double
 j2(double x)
 {
-  return jn(2, x);
+    return jn(2, x);
 }

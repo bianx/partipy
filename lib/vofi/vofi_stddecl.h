@@ -62,36 +62,36 @@
 typedef double vofi_real;
 typedef const double vofi_creal;
 typedef const int vofi_cint;
-typedef int* const vofi_int_cpt;
+typedef int *const vofi_int_cpt;
 typedef double (*integrand)(vofi_creal[]);
 
 /* xval: coordinates of the minimum or where the sign has changed, fval: local
    function value, sval: distance from the starting point, if applicable,
    iat: sign to have f>0, or if = 0 there is no minimum or no sign change */
 typedef struct {
-  vofi_real xval[NDIM];
-  vofi_real fval;
-  vofi_real sval;
-  int iat;
+    vofi_real xval[NDIM];
+    vofi_real fval;
+    vofi_real sval;
+    int iat;
 } min_data;
 
 /* ivs,ivt: indices to locate the vertex in the face, igs,igt: on/off indices
    for the gradient components, iat: sign to have f>0, or if = 0 there is no
    minimum or no sign change */
 typedef struct {
-  int ivs;
-  int ivt;
-  int igs;
-  int igt;
-  int iat;
+    int ivs;
+    int ivt;
+    int igs;
+    int igt;
+    int iat;
 } chk_data;
 
 /* icc: full/empty/cut cell (1/0/-1); ipt: tentative number of integration
    points; isb: number of subdivisions, not yet implemented (hence: 0/1) */
 typedef struct {
-  int icc;
-  int ipt;
-  int isb;
+    int icc;
+    int ipt;
+    int isb;
 } dir_data;
 
 /* function prototypes */
@@ -110,8 +110,8 @@ typedef struct {
  * @return fh "characteristic" function value
  * @note Fortran API
  */
-vofi_real EXPORT(vofi_get_fh)(
-    integrand, vofi_creal[], vofi_creal*, vofi_cint*, vofi_cint*);
+vofi_real EXPORT(vofi_get_fh) (integrand, vofi_creal[], vofi_creal *,
+                               vofi_cint *, vofi_cint *);
 
 /**
  * @brief Driver to compute the volume fraction value in a given cell in two
@@ -124,8 +124,8 @@ vofi_real EXPORT(vofi_get_fh)(
  * @return cc volume fraction value
  * @note Fortran API
  */
-vofi_real EXPORT(vofi_get_cc)(
-    integrand, vofi_creal[], vofi_creal*, vofi_creal*, vofi_cint*);
+vofi_real EXPORT(vofi_get_cc) (integrand, vofi_creal[], vofi_creal *,
+                               vofi_creal *, vofi_cint *);
 
 /**
  * @brief compute the zero in a given segment of length s0, the zero is strictly
@@ -138,8 +138,8 @@ vofi_real EXPORT(vofi_get_cc)(
  * @param f_sign sign attribute
  * @return sz: length of the segment where f is negative
  */
-vofi_real vofi_get_segment_zero(
-    integrand, vofi_creal[], vofi_creal[], vofi_creal[], vofi_creal, vofi_cint);
+vofi_real vofi_get_segment_zero(integrand, vofi_creal[], vofi_creal[],
+                                vofi_creal[], vofi_creal, vofi_cint);
 
 /**
  * @brief check consistency with a minimum in a cell side.
@@ -153,8 +153,8 @@ vofi_real vofi_get_segment_zero(
  * with a minimum inside, or zero if there is no minimum inside (or a zero
  * at both endpoints)
  */
-int vofi_check_side_consistency(
-    integrand, vofi_creal[], vofi_creal[], vofi_creal[], vofi_creal);
+int vofi_check_side_consistency(integrand, vofi_creal[], vofi_creal[],
+                                vofi_creal[], vofi_creal);
 
 /* -------------------------------------------------------------------------- *
  * DESCRIPTION:                                                               *
@@ -181,9 +181,9 @@ int vofi_check_side_consistency(
  * with a minimum inside, or zero if there is no minimum inside (or a zero
  * at both endpoints)
  */
-chk_data vofi_check_face_consistency(
-    integrand, vofi_creal[], vofi_creal[], vofi_creal[], vofi_creal[],
-    vofi_creal);
+chk_data vofi_check_face_consistency(integrand, vofi_creal[], vofi_creal[],
+                                     vofi_creal[], vofi_creal[],
+                                     vofi_creal);
 
 /**
  * @brief compute the value of the implicit function on a 3x3(x3) local grid.
@@ -199,9 +199,8 @@ chk_data vofi_check_face_consistency(
  * of integration points; isb: number of subdivisions, not yet implemented
  * (hence: 0/1)
  */
-dir_data vofi_get_dirs(
-    integrand, vofi_creal[], vofi_real[], vofi_real[], vofi_real[], vofi_creal,
-    vofi_creal, vofi_cint);
+dir_data vofi_get_dirs(integrand, vofi_creal[], vofi_real[], vofi_real[],
+                       vofi_real[], vofi_creal, vofi_creal, vofi_cint);
 
 /**
  * @brief subdivide the side along the secondary/tertiary (2/3) direction to
@@ -218,9 +217,8 @@ dir_data vofi_get_dirs(
  * @param ndim0 space dimension
  * @return nsub: total number of subdivisions
  */
-int vofi_get_limits(
-    integrand, vofi_creal[], vofi_real[], vofi_creal[], vofi_creal[],
-    vofi_creal[], vofi_creal, vofi_cint);
+int vofi_get_limits(integrand, vofi_creal[], vofi_real[], vofi_creal[],
+                    vofi_creal[], vofi_creal[], vofi_creal, vofi_cint);
 
 /**
  * @brief compute the interface intersections, if any, with a given cell side;
@@ -233,9 +231,9 @@ int vofi_get_limits(
  * @param nsub updated number of subdivisions
  * @param lim_intg updated start of new subdivisions
  */
-void vofi_get_side_intersections(
-    integrand, vofi_real[], vofi_creal[], vofi_real[], vofi_creal[], vofi_creal,
-    vofi_int_cpt);
+void vofi_get_side_intersections(integrand, vofi_real[], vofi_creal[],
+                                 vofi_real[], vofi_creal[], vofi_creal,
+                                 vofi_int_cpt);
 
 /**
  * @brief get the external limits of integration that are inside the face.
@@ -250,9 +248,9 @@ void vofi_get_side_intersections(
  * @param nsub updated number of subdivisions
  * @param lim_intg updated start of new subdivisions
  */
-void vofi_get_face_intersections(
-    integrand, min_data, vofi_creal[], vofi_real[], vofi_creal[], vofi_creal[],
-    vofi_creal, vofi_int_cpt);
+void vofi_get_face_intersections(integrand, min_data, vofi_creal[],
+                                 vofi_real[], vofi_creal[], vofi_creal[],
+                                 vofi_creal, vofi_int_cpt);
 
 /**
  * @brief compute the function minimum in a given segment of length s0, the
@@ -268,9 +266,9 @@ void vofi_get_face_intersections(
  * and attribute (= 1 if a sign change has been detected) of the minimum or
  * of a point with a different function sign
  */
-min_data vofi_get_segment_min(
-    integrand, vofi_creal[], vofi_creal[], vofi_creal[], vofi_creal, vofi_cint,
-    vofi_cint);
+min_data vofi_get_segment_min(integrand, vofi_creal[], vofi_creal[],
+                              vofi_creal[], vofi_creal, vofi_cint,
+                              vofi_cint);
 
 /**
  * @brief compute the function minimum in a cell face, the search is immediately
@@ -285,8 +283,8 @@ min_data vofi_get_segment_min(
  * and attribute (= 1 if a sign change has been detected) of the minimum or
  * of a point with a different function sign
  */
-min_data vofi_get_face_min(
-    integrand, vofi_creal[], vofi_creal[], vofi_creal[], chk_data, vofi_creal);
+min_data vofi_get_face_min(integrand, vofi_creal[], vofi_creal[],
+                           vofi_creal[], chk_data, vofi_creal);
 
 /**
  * @brief subdivide the side along the secondary/tertiary (2/3) direction to
@@ -301,9 +299,9 @@ min_data vofi_get_face_min(
  * @param nintpt tentative number of internal integration points
  * @return area: normalized value of the cut area or 2D volume fraction
  */
-vofi_real vofi_get_area(
-    integrand, vofi_creal[], vofi_creal[], vofi_creal[], vofi_creal[],
-    vofi_creal, vofi_cint, vofi_cint);
+vofi_real vofi_get_area(integrand, vofi_creal[], vofi_creal[],
+                        vofi_creal[], vofi_creal[], vofi_creal, vofi_cint,
+                        vofi_cint);
 
 /**
  * @brief compute the normalized cut volume with a double Gauss-Legendre
@@ -319,8 +317,8 @@ vofi_real vofi_get_area(
  * @param nintpt tentative number of internal integration points
  * @return vol: normalized value of the cut volume or 3D volume fraction
  */
-vofi_real vofi_get_volume(
-    integrand, vofi_creal[], vofi_creal[], vofi_creal[], vofi_creal[],
-    vofi_creal[], vofi_creal, vofi_cint, vofi_cint);
+vofi_real vofi_get_volume(integrand, vofi_creal[], vofi_creal[],
+                          vofi_creal[], vofi_creal[], vofi_creal[],
+                          vofi_creal, vofi_cint, vofi_cint);
 
 #endif

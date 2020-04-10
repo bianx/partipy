@@ -32,7 +32,7 @@ extern "C" {
  * @param fh "characteristic" function value
  * @note C/C++ API
  */
-double vofi_Get_fh(integrand, const double[], double, int, int);
+    double vofi_Get_fh(integrand, const double[], double, int, int);
 
 /**
  * @brief Driver to compute the volume fraction value in a given cell in two
@@ -45,10 +45,9 @@ double vofi_Get_fh(integrand, const double[], double, int, int);
  * @param cc volume fraction value
  * @note C/C++ API
  */
-double vofi_Get_cc(integrand, const double[], double, double, int);
+    double vofi_Get_cc(integrand, const double[], double, double, int);
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif

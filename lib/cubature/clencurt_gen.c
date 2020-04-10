@@ -71,11 +71,15 @@ extern long double cosl(long double x);
    clencurt_x except that it starts with the weight for x=0.
 */
 
-static int P(int m, int j)
+static int
+P(int m, int j)
 {
-     if (m == 0) return j;
-     else if (j < (1<<(m-1))) return 2 * P(m-1,j);
-     else return 2 * (j - (1<<(m-1))) + 1;
+    if (m == 0)
+        return j;
+    else if (j < (1 << (m - 1)))
+        return 2 * P(m - 1, j);
+    else
+        return 2 * (j - (1 << (m - 1))) + 1;
 }
 
 /***************************************************************************/
@@ -104,65 +108,73 @@ static int P(int m, int j)
    The weights are for integration of functions on (-1,1).
 */
 
-void clencurt_weights(int n, long double *w)
+void
+clencurt_weights(int n, long double *w)
 {
-     fftwl_plan p;
-     int j;
-     long double scale = 1.0 / n;
-     
-     p = fftwl_plan_r2r_1d(n+1, w, w, FFTW_REDFT00, FFTW_ESTIMATE);
-     for (j = 0; j <= n; ++j) w[j] = scale / (1 - 4*j*j);
-     fftwl_execute(p);
-     w[0] *= 0.5;
-     fftwl_destroy_plan(p);
+    fftwl_plan p;
+    int j;
+    long double scale = 1.0 / n;
+
+    p = fftwl_plan_r2r_1d(n + 1, w, w, FFTW_REDFT00, FFTW_ESTIMATE);
+    for (j = 0; j <= n; ++j)
+        w[j] = scale / (1 - 4 * j * j);
+    fftwl_execute(p);
+    w[0] *= 0.5;
+    fftwl_destroy_plan(p);
 }
+
 /***************************************************************************/
 
 #define KPI 3.1415926535897932384626433832795028841971L
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
-     int M = argc > 1 ? atoi(argv[1]) : 11;
-     long double *w;
-     int j, m;
-     long double k;
-     
-     if (argc > 2 || M < 0) {
-	  fprintf(stderr, "clencurt_gen usage: clencurt_gen [M]\n");
-	  return EXIT_FAILURE;
-     }
+    int M = argc > 1 ? atoi(argv[1]) : 11;
+    long double *w;
+    int j, m;
+    long double k;
 
-     w = (long double *) fftwl_malloc(sizeof(long double) * ((1<<(M+2)) - 2));
-     if (!w) {
-	  fprintf(stderr, "clencurt_gen: out of memory\n");
-	  return EXIT_FAILURE;
-     }	  
+    if (argc > 2 || M < 0) {
+        fprintf(stderr, "clencurt_gen usage: clencurt_gen [M]\n");
+        return EXIT_FAILURE;
+    }
 
-     printf("/* AUTOMATICALLY GENERATED -- DO NOT EDIT */\n\n");
- 
-     printf("static const int clencurt_M = %d;\n\n", M);
+    w = (long double *) fftwl_malloc(sizeof(long double) *
+                                     ((1 << (M + 2)) - 2));
+    if (!w) {
+        fprintf(stderr, "clencurt_gen: out of memory\n");
+        return EXIT_FAILURE;
+    }
 
-     printf("static const double clencurt_x[%d] = { /* length 2^M */\n", 1<<M);
-     k = KPI / ((long double) (1<<(M+1)));
-     for (j = 0; j < (1<<M); ++j)
-	  printf("%0.18Lg%s\n", cosl(k*P(M,j)), j == (1<<M)-1 ? "" : ",");
-     printf("};\n\n");
+    printf("/* AUTOMATICALLY GENERATED -- DO NOT EDIT */\n\n");
 
-     printf("static const double clencurt_w[%d] = { /* length M+2^(M+1) */\n",
-	    M + (1<<(M+1)));
-     for (m = 0; m <= M; ++m) {
-	  clencurt_weights(1 << m, w);
-	  printf("/* m = %d: */ %0.18Lg,\n", m, w[1 << m]);
-	  for (j = 0; j < (1 << m); ++j)
-	       printf("%0.18Lg%s\n", w[P(m,j)], 
-		      j == (1<<m)-1 && m == M ? "" : ",");
-     }
-     printf("};\n");
+    printf("static const int clencurt_M = %d;\n\n", M);
 
-     printf("\n/* P_M =");
-     for (j = 0; j < (1<<M); ++j)
-	  printf(" %d", P(M,j));
-     printf(" */\n");
-     
-     return EXIT_SUCCESS;
+    printf("static const double clencurt_x[%d] = { /* length 2^M */\n",
+           1 << M);
+    k = KPI / ((long double) (1 << (M + 1)));
+    for (j = 0; j < (1 << M); ++j)
+        printf("%0.18Lg%s\n", cosl(k * P(M, j)),
+               j == (1 << M) - 1 ? "" : ",");
+    printf("};\n\n");
+
+    printf
+        ("static const double clencurt_w[%d] = { /* length M+2^(M+1) */\n",
+         M + (1 << (M + 1)));
+    for (m = 0; m <= M; ++m) {
+        clencurt_weights(1 << m, w);
+        printf("/* m = %d: */ %0.18Lg,\n", m, w[1 << m]);
+        for (j = 0; j < (1 << m); ++j)
+            printf("%0.18Lg%s\n", w[P(m, j)],
+                   j == (1 << m) - 1 && m == M ? "" : ",");
+    }
+    printf("};\n");
+
+    printf("\n/* P_M =");
+    for (j = 0; j < (1 << M); ++j)
+        printf(" %d", P(M, j));
+    printf(" */\n");
+
+    return EXIT_SUCCESS;
 }

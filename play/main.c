@@ -18,11 +18,11 @@ static const double L = 1.0;
 static const double t1 = 4.0;
 static const double epsrel = 1e-6;
 static const double epsabs = 0;
-double Ham[M+1];
-double MomX[M+1];
-double MomY[M+1];
-double MomAz[M+1];
-int iH=0;
+double Ham[M + 1];
+double MomX[M + 1];
+double MomY[M + 1];
+double MomAz[M + 1];
+int iH = 0;
 
 
 struct Param {
@@ -66,9 +66,9 @@ func(double t, const double *z, double *f, void *params0)
                 den = cosh(2 * pi * dy) - cos(2 * pi * dx) + eps * eps;
                 fx[i] -= sinh(2 * pi * dy) / den;
                 fy[i] += sin(2 * pi * dx) / den;
-       }
+            }
     }
-    
+
     for (i = 0; i < n; i++) {
         fx[i] /= 2 * n;
         fy[i] /= 2 * n;
@@ -93,34 +93,34 @@ post(const double *z, void *params0)
     double Ht;
     double mx;
     double my;
-    
+
     params = params0;
     n = params->n;
     eps = params->eps;
     x = z;
     y = &z[n];
 
-    Ht=0;
+    Ht = 0;
     for (i = 0; i < n; i++) {
-      mx=0;
-      my=0;
-      for (j = 0; j < n; j++)
-	if (i != j) {
-	  dx = x[i] - x[j];
-	  dy = y[i] - y[j];
-	  den = cosh(2 * pi * dy) - cos(2 * pi * dx) + eps * eps;
-	  mx -= sinh(2 * pi * dy) / den;
-	  my += sin(2 * pi * dx) / den;
-	  if ( j > i ) {
-	    Ht += log(den);
-	  }
-       }
-      MomX[iH]+=mx;
-      MomY[iH]+=my;
-      MomAz[iH]+=x[i]*my-y[i]*mx;
-      
+        mx = 0;
+        my = 0;
+        for (j = 0; j < n; j++)
+            if (i != j) {
+                dx = x[i] - x[j];
+                dy = y[i] - y[j];
+                den = cosh(2 * pi * dy) - cos(2 * pi * dx) + eps * eps;
+                mx -= sinh(2 * pi * dy) / den;
+                my += sin(2 * pi * dx) / den;
+                if (j > i) {
+                    Ht += log(den);
+                }
+            }
+        MomX[iH] += mx;
+        MomY[iH] += my;
+        MomAz[iH] += x[i] * my - y[i] * mx;
+
     }
-    Ham[iH++]= -Ht/4/pi/n/n;
+    Ham[iH++] = -Ht / 4 / pi / n / n;
 
     return 0;
 }
@@ -172,7 +172,7 @@ main(int argc, char **argv)
             }
             eps = atof(argv[0]);
             Eflag = 1;
-            break;	    
+            break;
         case 'd':
             argv++;
             if (argv[0] == NULL) {
@@ -181,7 +181,7 @@ main(int argc, char **argv)
             }
             dt = atof(argv[0]);
             Dtflag = 1;
-            break;	    
+            break;
         default:
             fprintf(stderr, "%s: unknown option '%s'\n", me, argv[0]);
             exit(2);
@@ -198,15 +198,15 @@ main(int argc, char **argv)
         fprintf(stderr, "%s: -d is not given\n", me);
         exit(2);
     }
-    
+
     z = malloc(2 * n * sizeof(*z));
     if (z == NULL) {
-      fprintf(stderr, "%s: malloc failed\n", me);
-      exit(2);
+        fprintf(stderr, "%s: malloc failed\n", me);
+        exit(2);
     }
     param.n = n;
     param.eps = eps;
-    param.dt  = dt;
+    param.dt = dt;
     //dt_start = 0.0001;
     dt_start = dt;
     sys.function = func;
@@ -216,12 +216,12 @@ main(int argc, char **argv)
     driver = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk4,
                                            dt_start, epsrel, epsabs);
     if (driver == NULL) {
-      fprintf(stderr, "%s: driver allocation failed\n", me);
-      exit(2);
+        fprintf(stderr, "%s: driver allocation failed\n", me);
+        exit(2);
     }
     x = z;
     y = &z[n];
-    h = L / n ;
+    h = L / n;
     for (i = 0; i < n; i++) {
         x0 = i * h;
         x[i] = x0 + 0.01 * sin(2 * pi * x0);
@@ -233,27 +233,28 @@ main(int argc, char **argv)
         ti = dt_out * i;
         fprintf(stderr, "%s: %g\n", me, ti);
 
-	if ( post(z, &param) != 0 ) {
-	  fprintf(stderr, "%s: post failed\n", me);
+        if (post(z, &param) != 0) {
+            fprintf(stderr, "%s: post failed\n", me);
             exit(2);
-	}
+        }
 
-	if (gsl_odeiv2_driver_apply(driver, &t, ti, z) != GSL_SUCCESS) {
+        if (gsl_odeiv2_driver_apply(driver, &t, ti, z) != GSL_SUCCESS) {
             fprintf(stderr, "%s: driver failed\n", me);
             exit(2);
         }
 
         if (i > 0)
             printf("\n");
-	//printf ("#t=%.5g\n", ti);
+        //printf ("#t=%.5g\n", ti);
         for (j = 0; j < n; j++)
             printf("%.16g %.16g\n", x[j], y[j]);
     }
 
     printf("#This is Ham, MomX, MomY, MomAz\n");
-    for (i = 0; i<=M; i++) {
-      ti = dt_out * i;
-      printf("%.5g %.16g %.16g %.16g %.16g\n", ti, Ham[i], MomX[i], MomY[i], MomAz[i]);
+    for (i = 0; i <= M; i++) {
+        ti = dt_out * i;
+        printf("%.5g %.16g %.16g %.16g %.16g\n", ti, Ham[i], MomX[i],
+               MomY[i], MomAz[i]);
     }
     free(z);
     gsl_odeiv2_driver_free(driver);
