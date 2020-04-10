@@ -33,6 +33,7 @@ static real chorin_psi(real, real, void *);
 static real chorin_coef(void *);
 static int hald_dpsi(real, real, real *, real *, void *);
 static real hald_coef(void *);
+static real hald_psi(real, real, void *);
 static int krasny_dpsi(real, real, real *, real *, void *);
 static real krasny_coef(void *);
 static int j0_dpsi(real, real, real *, real *, void *);
@@ -50,7 +51,7 @@ struct Core {
 static struct Core Core[] = {
     { chorin_psi, chorin_dpsi, chorin_coef, NULL },
     { gauss_psi, gauss_dpsi, gauss_coef, NULL },
-    { NULL, hald_dpsi, hald_coef, NULL },
+    { hald_psi, hald_dpsi, hald_coef, NULL },
     { NULL, j0_dpsi, j0_coef, NULL },
     { NULL, krasny_dpsi, krasny_coef, NULL },
 };
@@ -169,7 +170,7 @@ main(int argc, char **argv)
     core = NULL;
     scheme = NULL;
     nremesh = 0;
-    remesh = remesh_m4;
+    remesh = remesh_psi;
     Grid = 0;
     while (*++argv != NULL && argv[0][0] == '-')
         switch (argv[0][1]) {
@@ -635,6 +636,30 @@ hald_coef(void *p)
 {
     (void) p;
     return 1 / (2 * pi);
+}
+
+static real
+j2(real x)
+{
+    return jn(2, x);
+}
+
+static real
+hald_psi(real x, real y, void *p0)
+{
+    real d;
+    real r;
+    real ans;
+    struct PsiParam *p;
+
+    p = p0;
+    d = p->delta;
+    r = sqrtr(x * x + y * y) / d;
+    if (r < 0.001)
+        ans = 15 / 8.0 - 21 * r * r / 32.0;
+    else
+        ans = 1 / (r * r) * (4 * j2(2 * r) - j2(r));
+    return ans / (3 * pi * d * d);
 }
 
 static int
@@ -1169,7 +1194,7 @@ particle(struct Core *core, int n, const real * x, const real * y,
         ksi0[i] = 0;
         for (j = 0; j < n; j++)
             ksi0[i] +=
-                ksi[i] * core->psi(x[i] - x[j], y[i] - y[j], core->param);
+                ksi[j] * core->psi(x[i] - x[j], y[i] - y[j], core->param);
     }
     return 0;
 }
@@ -1197,7 +1222,6 @@ grid(void *p0, int n, const real * x, const real * y, const real * ksi,
     real xlo;
     real yhi;
     real ylo;
-    int status;
     char path[SIZE];
     struct Core *core;
     struct RemeshParam *p;
