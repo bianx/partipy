@@ -1298,7 +1298,7 @@ punto_grid(void *p0, int n, const real * x, const real * y, const real * ksi,
         v = ylo + (j + 0.5) * dy;
         for (i = 0; i < nx; i++) {
             u = xlo + (i + 0.5) * dx;
-            fprintf(f, "%.16e %.16e %.16e\n", v, u, ksi0[l++]);
+            fprintf(f, "%.16e %.16e %.16e\n", u, v, ksi0[l++]);
         }
     }
     fclose(f);
