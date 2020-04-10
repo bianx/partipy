@@ -1,0 +1,58 @@
+#!/bin/sh
+
+"${AWK=awk}" -v skel="$1" -v punto="$2" -v me=post/skel '
+BEGIN {
+   getline < skel
+   if ("" $0 != "SKEL") {
+       printf "%s: not a skel file '\''%s'\''\n", me, skel | "cat >&2"
+       printf "%s: expected SKEL got '\''%s'\''\n", me, $0 | "cat >&2"
+       exit(2)
+   }
+   getline < skel
+   nv = $1
+   np = $2
+   for (i = 0; i < nv; i++)
+       if (getline < skel != 1) {
+	   printf "%s: fail to read '\''%s'\''\n", me, punto | "cat >&2"
+	   exit(2)
+       }
+
+   for (i = 0; i < np; i++) {
+       if (getline < skel != 1) {
+	   printf "%s: fail to read '\''%s'\''\n", me, punto | "cat >&2"
+	   exit(2)
+       }
+       line[i] = $0
+   }
+
+   for (i = 0; i < nv; i++) {
+       if (getline < punto != 1) {
+	   printf "%s: fail to read line '\''%d'\'' from '\''%s'\''\n", me, i, punto | "cat >&2"
+	   exit(2)
+       }
+       if (NF < 2) {
+	   printf "%s: fail to parse line '\''%d'\'' from '\''%s'\''\n", me, i, punto | "cat >&2"
+	   exit(2)
+       }
+       x[i] = $1
+       y[i] = $2
+   }
+
+   if (output == "skel") {
+       print "SKEL"
+       print nv, np
+       for (i = 0; i < nv; i++)
+	   print x[i], y[i], 0
+       for (i = 0; i < np; i++)
+	   print line[i]
+   } else {
+       for (i = 0; i < np; i++) {
+	   n = split(line[i], a)
+	   for (j = 2; j <= n; j++)
+	       print x[a[j]], y[a[j]], i
+	   printf "\n"
+       }
+   }
+
+}
+'
