@@ -467,6 +467,7 @@ main(int argc, char **argv)
     free(y);
     free(buf);
     free(ksi);
+    free(ksi0);
     ode_fin(ode);
 }
 
@@ -1167,9 +1168,9 @@ remesh_psi(void *p0, int *pn, real * x, real * y, real * ksi)
     int nx;
     int ny;
     real coef;
+    real *ksi0;
     real dx;
     real dy;
-    real ksi0[999999];
     real u;
     real v;
     real xhi;
@@ -1194,6 +1195,10 @@ remesh_psi(void *p0, int *pn, real * x, real * y, real * ksi)
     dx = (xhi - xlo) / nx;
     dy = (yhi - ylo) / ny;
     m = nx * ny;
+    if ((ksi0 = malloc(m * sizeof(*ksi0))) == NULL) {
+	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+	exit(2);
+    }
     for (i = 0; i < m; i++)
 	ksi0[i] = 0;
 
@@ -1239,6 +1244,7 @@ remesh_psi(void *p0, int *pn, real * x, real * y, real * ksi)
 	    ksi[j] = ksi[i];
 	    j++;
 	}
+    free(ksi0);
     *pn = j;
     return 0;
 }
