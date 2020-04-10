@@ -1246,7 +1246,7 @@ punto_grid(void *p0, int n, const real * x, const real * y, const real * ksi,
     int ny;
     real dx;
     real dy;
-    real ksi0[99999];
+    real *ksi0;
     real u;
     real v;
     real xhi;
@@ -1272,9 +1272,12 @@ punto_grid(void *p0, int n, const real * x, const real * y, const real * ksi,
     dx = (xhi - xlo) / nx;
     dy = (yhi - ylo) / ny;
     m = nx * ny;
+    if ((ksi0 = malloc(m * sizeof(*ksi0))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
     for (i = 0; i < m; i++)
         ksi0[i] = 0;
-
     for (k = 0; k < n; k++) {
         l = 0;
         for (j = 0; j < ny; j++) {
@@ -1301,6 +1304,8 @@ punto_grid(void *p0, int n, const real * x, const real * y, const real * ksi,
             fprintf(f, "%.16e %.16e %.16e\n", u, v, ksi0[l++]);
         }
     }
+
+    free(ksi0);
     fclose(f);
     return 0;
 }
@@ -1318,6 +1323,7 @@ null_grid(void * p0, int n, const real * x, const real * y, const real * ksi, in
 
 static int
 vtk_grid(void * p0, int n, const real * x, const real * y, const real * ksi, int step) {
+  char path[SIZE];
   FILE *f;
   int i;
   int j;
@@ -1326,17 +1332,16 @@ vtk_grid(void * p0, int n, const real * x, const real * y, const real * ksi, int
   int m;
   int nx;
   int ny;
+  int status;
   real dx;
   real dy;
-  real ksi0[99999];
+  real *ksi0;
   real u;
   real v;
   real xhi;
   real xlo;
   real yhi;
   real ylo;
-  int status;
-  char path[SIZE];
   struct Core *core;
   struct RemeshParam *p;
 
@@ -1355,10 +1360,12 @@ vtk_grid(void * p0, int n, const real * x, const real * y, const real * ksi, int
   dx = (xhi - xlo) / nx;
   dy = (yhi - ylo) / ny;
   m = nx * ny;
+  if ((ksi0 = malloc(m * sizeof(*ksi0))) == NULL) {
+    fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+    exit(2);
+  }
   for (i = 0; i < m; i++)
     ksi0[i] = 0;
-
-
   for (k = 0; k < n; k++) {
     l = 0;
     for (j = 0; j < ny; j++) {
@@ -1393,6 +1400,7 @@ vtk_grid(void * p0, int n, const real * x, const real * y, const real * ksi, int
 	  "SCALARS omega double\n" "LOOKUP_TABLE DEFAULT\n", m);
   for (i = 0; i < m; i++)
     fprintf(f, "%.16e\n", ksi0[i]);
+  free(ksi0);
   fclose(f);
   return 0;
 }
