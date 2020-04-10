@@ -61,6 +61,7 @@ A = numpy.empty((n, n))
 for i in range(n):
     sys.stderr.write("%02d of %02d\n" % (i, n))
     for j in range(i, n):
+        sys.stderr.write("%02d of %02d\n" % (j, n))
         fun = lambda v, u : p(v - y[i], u - x[i]) * p(v - y[j], u - x[j]) * ellipse(v, u, a, b)
         ans, err = scipy.integrate.dblquad(fun, -b, b, -a, a, (), epsabs, epsrel)
         A[i, j] = A[j, i] = ans

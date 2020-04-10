@@ -15,7 +15,7 @@ static void
 usg(void)
 {
     fprintf(stderr,
-            "%s -t time -m M -e every -d delta -c [chorin gauss hald j0 krasny] -s [euler rk4] -o [punto|skel|off|gnuplot] [> punto] < initial\n",
+            "%s -t time -m M -e every -d delta -c [chorin gauss hald j0 krasny] -s [euler rk4] -o [punto|skel|off|gnuplot] -g [punto|vtk] [> punto] < initial\n",
             me);
     exit(1);
 }
@@ -38,8 +38,13 @@ static int krasny_dpsi(real, real, real *, real *, void *);
 static real krasny_coef(void *);
 static int j0_dpsi(real, real, real *, real *, void *);
 static real j0_coef(void *);
-static int grid(void *p0, int n, const real * x, const real * y,
-                const real * ksi, int step);
+
+static int punto_grid(void *, int, const real * , const real * ,
+		      const real *, int step);
+static int vtk_grid(void *, int , const real *, const real *,
+		      const real *, int step);
+static int null_grid(void *, int, const real *, const real *,
+		     const real *, int step);
 
 struct Core {
     real(*psi) (real, real, void *);
@@ -128,6 +133,19 @@ static int (*const WriteFun[])(int, const real *, const real *,
     vtk_write,
 };
 
+static const char *GridName[] = {
+    "punto",
+    "vtk",
+    "null",
+};
+
+static int (*const Grid[])(void *, int, const real *, const real *,
+			   const real *, int) = {
+    punto_grid,
+    vtk_grid,
+    null_grid,
+};
+
 int
 main(int argc, char **argv)
 {
@@ -146,9 +164,10 @@ main(int argc, char **argv)
     int nremesh;
     int Sflag;
     int Tflag;
-    int Grid;
     int (*write)(int, const real *, const real *, const real *, int);
     int (*remesh)(void *, int *, real *, real *, real *);
+    int (*grid)(void *, int, const real *, const real *, const real *, int);
+
     real *buf;
     real delta;
     real dt;
@@ -171,7 +190,7 @@ main(int argc, char **argv)
     scheme = NULL;
     nremesh = 0;
     remesh = remesh_psi;
-    Grid = 0;
+    grid = null_grid;
     while (*++argv != NULL && argv[0][0] == '-')
         switch (argv[0][1]) {
         case 'h':
@@ -196,8 +215,22 @@ main(int argc, char **argv)
             Sflag = 1;
             break;
         case 'g':
-            argv++;
-            Grid = 1;
+	    argv++;
+            if (argv[0] == NULL) {
+                fprintf(stderr, "%s: -g needs an argument\n", me);
+                exit(2);
+            }
+            for (i = 0;; i++) {
+                if (i == sizeof(GridName) / sizeof(*GridName)) {
+                    fprintf(stderr, "%s: unknown grid name '%s'\n", me,
+                            argv[0]);
+                    exit(2);
+                }
+                if (strncmp(argv[0], GridName[i], SIZE) == 0) {
+                    grid = Grid[i];
+                    break;
+                }
+            }
             break;
         case 'e':
             argv++;
@@ -363,8 +396,8 @@ main(int argc, char **argv)
     ode_param.dt = dt;
     ode_param.scheme = scheme;
 
-    remesh_param.nx = 3.2 / delta * 2;
-    remesh_param.ny = 3.2 / delta * 2;
+    remesh_param.nx = 3.2 / delta * 8;
+    remesh_param.ny = 3.2 / delta * 8;
     remesh_param.xlo = -1.6;
     remesh_param.xhi = 1.6;
     remesh_param.ylo = -1.6;
@@ -385,8 +418,7 @@ main(int argc, char **argv)
                 fprintf(stderr, "%s: write failed\n", me);
                 exit(2);
             }
-            if (Grid)
-                grid(&remesh_param, n, x, y, ksi, i);
+	    grid(&remesh_param, n, x, y, ksi, i);
         }
         if (i == m)
             break;
@@ -1201,8 +1233,8 @@ particle(struct Core *core, int n, const real * x, const real * y,
 
 
 static int
-grid(void *p0, int n, const real * x, const real * y, const real * ksi,
-     int step)
+punto_grid(void *p0, int n, const real * x, const real * y, const real * ksi,
+	   int step)
 {
     FILE *f;
     int i;
@@ -1212,7 +1244,6 @@ grid(void *p0, int n, const real * x, const real * y, const real * ksi,
     int m;
     int nx;
     int ny;
-    real coef;
     real dx;
     real dy;
     real ksi0[99999];
@@ -1256,16 +1287,12 @@ grid(void *p0, int n, const real * x, const real * y, const real * ksi,
             }
         }
     }
-    coef = dx * dy;
-    for (i = 0; i < m; i++)
-        ksi0[i] *= coef;
     snprintf(path, SIZE, "%06d.grid", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
     if ((f = fopen(path, "w")) == NULL) {
         fprintf(stderr, "%s: fail to open '%s'\n", me, path);
         exit(2);
     }
-
     l = 0;
     for (j = 0; j < ny; j++) {
         v = ylo + (j + 0.5) * dy;
@@ -1274,7 +1301,98 @@ grid(void *p0, int n, const real * x, const real * y, const real * ksi,
             fprintf(f, "%.16e %.16e %.16e\n", v, u, ksi0[l++]);
         }
     }
-
     fclose(f);
     return 0;
+}
+
+static int
+null_grid(void * p0, int n, const real * x, const real * y, const real * ksi, int step) {
+  (void)p0;
+  (void)n;
+  (void)x;
+  (void)y;
+  (void)ksi;
+  (void)step;
+  return 0;
+}
+
+static int
+vtk_grid(void * p0, int n, const real * x, const real * y, const real * ksi, int step) {
+  FILE *f;
+  int i;
+  int j;
+  int k;
+  int l;
+  int m;
+  int nx;
+  int ny;
+  real dx;
+  real dy;
+  real ksi0[99999];
+  real u;
+  real v;
+  real xhi;
+  real xlo;
+  real yhi;
+  real ylo;
+  int status;
+  char path[SIZE];
+  struct Core *core;
+  struct RemeshParam *p;
+
+  p = p0;
+  nx = p->nx;
+  ny = p->ny;
+  xlo = p->xlo;
+  xhi = p->xhi;
+  ylo = p->ylo;
+  yhi = p->yhi;
+  core = p->core;
+
+  if (core->psi == NULL)
+    return 0;
+
+  dx = (xhi - xlo) / nx;
+  dy = (yhi - ylo) / ny;
+  m = nx * ny;
+  for (i = 0; i < m; i++)
+    ksi0[i] = 0;
+
+
+  for (k = 0; k < n; k++) {
+    l = 0;
+    for (j = 0; j < ny; j++) {
+	v = ylo + (j + 0.5) * dy;
+	for (i = 0; i < nx; i++) {
+	  u = xlo + (i + 0.5) * dx;
+	  ksi0[l] += ksi[k] * gauss_psi(x[k] - u, y[k] - v, core->param);
+	  l++;
+	}
+    }
+  }
+  snprintf(path, SIZE, "a.%06d.vtk", step);
+  fprintf(stderr, "%s: write '%s'\n", me, path);
+  if ((f = fopen(path, "w")) == NULL) {
+    fprintf(stderr, "%s: fail to open '%s'\n", me, path);
+    exit(2);
+  }
+  status = fprintf(f, "# vtk DataFile Version 2.0\n"
+		   "generated by %s\n"
+		   "ASCII\n"
+		   "DATASET STRUCTURED_POINTS\n"
+		   "DIMENSIONS %d %d 1\n"
+		   "ORIGIN %.16e %.16e 0\n"
+		   "SPACING %.16e %.16e 0\n",
+		   me, nx, ny, xlo + dx/2, ylo + dy/2,
+		   dx, dy);
+  if (status < 0) {
+    fprintf(stderr, "%s: fail to write '%s'\n", me, path);
+    exit(2);
+  }
+  fprintf(f, "POINT_DATA %d\n"
+	  "SCALARS omega double\n" "LOOKUP_TABLE DEFAULT\n", m);
+  for (i = 0; i < m; i++)
+    fprintf(f, "%.16e\n", ksi0[i]);
+  fclose(f);
+  return 0;
 }

@@ -86,6 +86,8 @@ vorII(double x, double y)
 static double
 vorConst(double x, double y)
 {
+  (void)x;
+  (void)y;
   return Ksi;
 }
 
@@ -101,12 +103,9 @@ main(int argc, char **argv)
     double *Ksi;
     double *x;
     double *y;
-    gsl_matrix_view vA;
     gsl_matrix_view vC;
     gsl_matrix_view vInvC;
     gsl_permutation *p;
-    gsl_vector_view vB;
-    gsl_vector_view vKsi;
     int i;
     int j;
     int k;
@@ -119,9 +118,9 @@ main(int argc, char **argv)
     struct ZeroParam zero_param;
     (void) argc;
     
-    gamma = 10;
+    gamma = 0.1;
     lin_param.vor = zero_param.vor = vorConst;
-    lin_param.psi = cross_param.psi = hald;
+    lin_param.psi = cross_param.psi = gauss;
     Verbose = getenv("LOG") != NULL;
     while (*++argv != NULL && argv[0][0] == '-')
 	switch (argv[0][1]) {
@@ -163,9 +162,8 @@ main(int argc, char **argv)
     }
     n = i;
 
-    double Mean;
-    Mean = a * b * dblint(zero, &zero_param, 0, 1, 0, 2 * pi) / n;
-    fprintf(stderr, "Vorticity: %.16g\n", Mean);
+    /* Mean = a * b * dblint(zero, &zero_param, 0, 1, 0, 2 * pi) / n;
+       fprintf(stderr, "Vorticity: %.16g\n", Mean);*/
     
     if ((A = malloc(n * n * sizeof(*A))) == NULL) {
 	fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
@@ -203,9 +201,9 @@ main(int argc, char **argv)
       lin_param.y = y[i];
       B[i] = a * b * dblint(lin, &lin_param, 0, 1, 0, 2 * pi);
     }
-    for (i = 0; i < n; i++)
+    /* for (i = 0; i < n; i++)
       for (j = 0; j < n; j++)
-	B[i] -= Mean * A[j + i * n];
+      B[i] -= Mean * A[j + i * n]; */
     for (i = 0; i < n; i++)
       for (j = 0; j < n; j++) {
 	C[j + i * n] = 0;
@@ -214,11 +212,8 @@ main(int argc, char **argv)
       }
     for (i = 0; i < n; i++)
       C[i + i * n] += gamma;
-    vA = gsl_matrix_view_array(A, n, n);
-    vB = gsl_vector_view_array(B, n);
     vC = gsl_matrix_view_array(C, n, n);
     vInvC = gsl_matrix_view_array(invC, n, n);
-    vKsi = gsl_vector_view_array(Ksi, n);
     if ((p = gsl_permutation_alloc(n)) == NULL) {
       fprintf(stderr, "%s:%d: gsl_permutation_alloc failed\n", __FILE__, __LINE__);
       exit(1);
@@ -232,7 +227,7 @@ main(int argc, char **argv)
 	  Ksi[i] += invC[j + i * n] * A[k + j * n] * B[k];
     }
     for (i = 0; i < n; i++)
-       printf ("%.16e %.16e %.16e\n", x[i], y[i], Ksi[i] + Mean);
+       printf ("%.16e %.16e %.16e\n", x[i], y[i], Ksi[i]);
     gsl_permutation_free(p);
     free(x);
     free(y);
