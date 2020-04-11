@@ -1,6 +1,55 @@
 #!/bin/sh
 
-"${AWK=awk}" -v skel="$1" -v punto="$2" -v me=post/skel '
+me=post/initial
+
+usg () {
+    cat <<EOF
+$me -o gnuplot|punto skel.file punto.file
+EOF
+}
+
+output=gnuplot
+while test $# -ne 0
+do case "$1" in
+       -h) usg
+	   exit 2
+	   ;;
+       -o) shift
+	   if test $# -eq 0
+	   then echo >&2 "$me: -o needs an argument"
+		exit 2
+	   fi
+	   case "$1" in
+	       skel|gnuplot) ;;
+	       *) echo >&2 "$me: unknown output type '$1'"
+		  exit 2
+		  ;;
+	   esac
+	   output="$1"
+	   shift
+	   ;;
+       -*) echo >&2 "$me: unknown option '$1'"
+	   exit 2
+	   ;;
+       *) break
+   esac
+done
+
+skel=$1
+shift
+if ! test -f "$skel"
+then echo >&2 "$me: not a file '$skel'"
+     exit 1
+fi
+
+punto=$1
+shift
+if ! test -f "$punto"
+then echo >&2 "$me: not a file '$punto'"
+     exit 1
+fi
+
+"${AWK=awk}" -v output="$output" -v skel="$skel" -v punto="$punto" -v me="$me" '
 BEGIN {
    getline < skel
    if ("" $0 != "SKEL") {
@@ -36,6 +85,8 @@ BEGIN {
        }
        x[i] = $1
        y[i] = $2
+       ksi[i] = $3
+       ksi0[i] = $4
    }
 
    if (output == "skel") {
@@ -44,15 +95,23 @@ BEGIN {
        for (i = 0; i < nv; i++)
 	   print x[i], y[i], 0
        for (i = 0; i < np; i++)
-	   print line[i]
+	   print line[i], rgb(i)
    } else {
        for (i = 0; i < np; i++) {
+	   if (i > 0)
+	       printf "\n"
 	   n = split(line[i], a)
-	   for (j = 2; j <= n; j++)
-	       print x[a[j]], y[a[j]], i
-	   printf "\n"
+	   for (j = 2; j <= n; j++) {
+	       k = a[j]
+	       print x[k], y[k], i, ksi[k], ksi0[k]
+	   }
        }
    }
+}
 
+function rgb(i,   color) {
+    n = split("0 0 1,0 1 0,1 0 0", color, ",")
+    i = i % n
+    return color[i + 1]
 }
 '
