@@ -7,12 +7,12 @@ import matplotlib.tri as tri
 import os, subprocess
 
 #inputdir = '../gauss/vor_i_output_gnuplot/'
-inputdir = '../gauss/tt'
+inputdir = '../gauss/'
 #inputdir = os.getcwd()
 print(inputdir)
 
-nx=80
-ny=80
+nx=160
+ny=160
 tot=nx*ny
 
 x=np.zeros((ny, nx))
@@ -21,7 +21,7 @@ z=np.zeros((ny, nx))
 
 npts = 2508
 fcount = 0
-fmax   = 136
+fmax   = 70
 
 files = os.listdir(inputdir)
 files.sort()
@@ -29,7 +29,7 @@ files.sort()
 
 
 zmin=0
-zmax=3.2e-2
+zmax=8.0e-3
 lev = np.linspace(zmin, zmax, 21)
 #print(lev)
 
