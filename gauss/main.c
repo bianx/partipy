@@ -1057,6 +1057,58 @@ step_rk4(struct Ode *q, int n, real * y)
 }
 
 static real
+lam1(real cutoff, real x)
+{
+    real a;
+
+    x = fabs(x) / cutoff;
+    a = 1 - x;
+    
+    if (x < 1 )
+      return a / cutoff;
+    else
+        return 0;
+}
+
+static real
+lam2(real cutoff, real x)
+{
+    real a;
+    real b;
+
+    x = fabs(x) / cutoff;
+    a = 1 - x;
+    b = 2 - x;
+    
+    if (x < 0.5 )
+      return (1 - x * x) / cutoff;
+    else if (x < 1.5)
+      return a * b / 2 / cutoff;
+    else
+        return 0;
+}
+
+static real
+lam3(real cutoff, real x)
+{
+    real a;
+    real b;
+    real c;
+
+    x = fabs(x) / cutoff;
+    a = 1 - x;
+    b = 2 - x;
+    c = 3 - x;
+    
+    if (x < 1 )
+      return ( 1 - x * x) * b / 2 / cutoff;
+    else if ( x < 2 )
+      return a * b * c / 6 / cutoff;
+    else
+        return 0;
+}
+
+static real
 m4(real cutoff, real x)
 {
     real a;
@@ -1069,6 +1121,22 @@ m4(real cutoff, real x)
         return (a * a * a / 6 - 4 * b * b * b / 6) / cutoff;
     else if (x < 2)
         return a * a * a / 6 / cutoff;
+    else
+        return 0;
+}
+
+static real
+m4p(real cutoff, real x)
+{
+    real a;
+    //This is Eq.(19) (M prime kernel) in Koumoutsakos J. Comput. Phys. 1996
+    x = fabs(x) / cutoff;
+    a = 2 - x;
+
+    if (x < 1)
+        return (1 - 5 * x * x / 2 + 3 * x * x * 3 / 2) / cutoff;
+    else if (x < 2)
+      return ( 2 - a) * (2 - a ) * ( 1 - a) / 2 / cutoff;
     else
         return 0;
 }
