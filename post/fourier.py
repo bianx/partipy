@@ -1,26 +1,41 @@
-#!/usr/bin/env python3
+#!/bin/env python3
 
-import math
-import cmath
 import numpy
-import numpy.fft
+import sys
+import math
 
-D = numpy.loadtxt("q")
+def triginterp(xi,x,y):
+    N = len(x)
+    h = 2 / N
+    scale = (x[1] - x[0]) / h
+    x  = x / scale
+    xi = xi / scale
+    P = numpy.zeros_like(xi)
+    for k in range(N):
+        P = P + y[k]*trigcardinal(xi-x[k], N)
+    return P
+
+def trigcardinal(x, N):
+  if N % 2 == 1:
+    tau = numpy.sin(N*math.pi*x/2) / (N*numpy.sin(math.pi*x/2))
+  else:
+    tau = numpy.sin(N*math.pi*x/2) / (N*numpy.tan(math.pi*x/2))
+  tau[x==0] = 1
+  return tau
+
+D = numpy.loadtxt(sys.stdin)
 x = D[:, 0]
 y = D[:, 1]
-ksi = D[:, 3]
-ksi0 = D[:, 4]
-
 
 N = len(x)
-G = numpy.arange(N) / N
-p = x + 1j * y - G
-f = numpy.fft.fft(p)
-g = numpy.linspace(0, max(G), 2*len(G))
+p = x + 1j * y
 
-for n in [G[0], G[1], G[2]]:
-    s = 0
-    for k in range(N):
-        s += 1/N * f[k] * cmath.exp(1j * 2 * math.pi * k * n)
-    s += n
-    print(s.real, s.imag)
+G = numpy.linspace(0, N - 1, N)
+g = numpy.linspace(0, N - 1, 100 * N)
+p0 = triginterp(g, G, p)
+
+x0 = numpy.real(p0)
+y0 = numpy.imag(p0)
+
+for i in range(len(x0)):
+    print(x0[i], y0[i])

@@ -103,8 +103,9 @@ BEGIN {
 	   n = split(line[i], a)
 	   for (j = 2; j <= n; j++) {
 	       k = a[j]
-	       print x[k], y[k], i, ksi[k], ksi0[k]
+	       print x[k], y[k], i, ksi[k], ksi0[k] | "./fourier.py"
 	   }
+           close("./fourier.py")
        }
    }
 }
