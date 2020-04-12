@@ -16,10 +16,9 @@ int
 main(int argc, char **argv)
 {
     char line[SIZE];
-    double xl;
-    double xh;
-    double yl;
-    double yh;
+    double xc;
+    double yc;
+    double w;
     double *x;
     double *y;
     double mass;
@@ -29,11 +28,10 @@ main(int argc, char **argv)
 
     (void) argc;
 
-    xl = -1;
-    xh = 1;
-    yl = -1;
-    yh = 1;
-    mass = 0;
+    xc = 0;
+    yc = 0;
+    w = 2;
+    mass = 1;
 
     while (*++argv != NULL && argv[0][0] == '-')
         switch (argv[0][1]) {
@@ -54,7 +52,7 @@ main(int argc, char **argv)
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         exit(1);
     }
-    if ((barnes_hut = barnes_hut_ini(xl, xh, yl, yh)) == NULL) {
+    if ((barnes_hut = barnes_hut_ini(xc, xc, w)) == NULL) {
         fprintf(stderr, "%s:%d: barnes_hut_ini failed\n", __FILE__,
                 __LINE__);
         exit(1);

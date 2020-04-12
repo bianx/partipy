@@ -3,37 +3,39 @@
 #include "barnes-hut.h"
 
 enum { NE, NW, SW, SE };
+static const int Dir[] = { NE, NW, SW, SE };
+
 struct Node {
     double m;
+    double mx;
+    double my;
+    double w;
     double x;
     double y;
     long id;
-    double xl;
-    double xh;
-    double yl;
-    double yh;
     struct Node *elm[4];
 };
 
 struct BarnesHut {
-    double xh;
-    double xl;
-    double yh;
-    double yl;
+    double x;
+    double y;
+    double w;
     long cap;
     long cnt;
     struct Node **node;
 };
 
 static int quadrant(struct Node *, double, double);
-static int box(struct Node *, int, double *, double *, double *, double *);
+static int box(struct Node *, int, double *, double *, double *);
 static struct Node *node_ini(struct BarnesHut *);
 static int insert(struct BarnesHut *, struct Node *, double, double,
                   double, long);
-static int walk(struct BarnesHut *, struct Node *, int (*)(struct BarnesHut *, struct Node *, void *), void *);
+static int walk(struct BarnesHut *, struct Node *,
+                int (*)(struct BarnesHut *, struct Node *, void *),
+                void *);
 
 struct BarnesHut *
-barnes_hut_ini(double xl, double xh, double yl, double yh)
+barnes_hut_ini(double x, double y, double w)
 {
     struct BarnesHut *q;
 
@@ -47,10 +49,9 @@ barnes_hut_ini(double xl, double xh, double yl, double yh)
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         return NULL;
     }
-    q->xl = xl;
-    q->xh = xh;
-    q->yl = yl;
-    q->yh = yh;
+    q->x = x;
+    q->y = y;
+    q->w = w;
     return q;
 }
 
@@ -78,13 +79,12 @@ barnes_hut_insert(struct BarnesHut *q, double x, double y, double m,
             return 1;
         }
         no->m = m;
-        no->x = x;
-        no->y = y;
+        no->mx = x;
+        no->my = y;
         no->id = id;
-        no->xl = q->xl;
-        no->xh = q->xh;
-        no->yl = q->yl;
-        no->yh = q->yh;
+        no->x = q->x;
+        no->y = q->y;
+        no->w = q->w;
         no->elm[NE] = NULL;
         no->elm[NW] = NULL;
         no->elm[SW] = NULL;
@@ -96,24 +96,117 @@ barnes_hut_insert(struct BarnesHut *q, double x, double y, double m,
 }
 
 static int
+force(struct Node *n, double theta2,
+      int (*function)(double, double, double *, double *,
+                      void *), long id, double x, double y, double *fx,
+      double *fy, void *data)
+{
+    double dx;
+    double dy;
+    double r2;
+    double w2;
+    double u;
+    double v;
+    int i;
+    int j;
+
+    dx = x - n->x;
+    dy = y - n->y;
+    r2 = dx * dx + dy * dy;
+    w2 = n->w * n->w;
+    if (n->elm[NE] == NULL && n->elm[NW] == NULL && n->elm[SW] == NULL
+        && n->elm[SE] == NULL) {
+        if (id != n->id) {
+            if (function(dx, dy, &u, &v, data)) {
+                fprintf(stderr, "%s:%d: function() failed\n", __FILE__,
+                        __LINE__);
+                return 1;
+            }
+            *fx = n->m * u;
+            *fy = n->m * v;
+        }
+    } else {
+        if (w2 < theta2 * r2) {
+            if (function(dx, dy, &u, &v, data)) {
+                fprintf(stderr, "%s:%d: function() failed\n", __FILE__,
+                        __LINE__);
+                return 1;
+            }
+            *fx = n->m * u;
+            *fy = n->m * v;
+        } else {
+            *fx = 0;
+            *fy = 0;
+            for (i = 0; i < (int) (sizeof Dir / sizeof *Dir); i++) {
+                j = Dir[i];
+                if (n->elm[j] != NULL) {
+                    if (force
+                        (n->elm[j], theta2, function, id, x, y, &u, &v,
+                         data)) {
+                        fprintf(stderr, "%s:%d: function() failed\n",
+                                __FILE__, __LINE__);
+                        return 1;
+                    }
+                }
+                *fx += u;
+                *fy += v;
+            }
+        }
+    }
+    return 0;
+}
+
+
+int
+barnes_hut_force(struct BarnesHut *q, double theta,
+                 int (*function)(double, double, double *, double *,
+                                 void *), long id, double x, double y,
+                 double *fx, double *fy, void *data)
+{
+    double u;
+    double v;
+
+    if (q->cnt > 0) {
+        if (force
+            (q->node[0], theta * theta, function, id, x, y, &u, &v,
+             data) != 0) {
+            fprintf(stderr, "%s:%d: force() failed\n", __FILE__, __LINE__);
+            return 1;
+        }
+    }
+    *fx = u;
+    *fy = v;
+    return 0;
+}
+
+static int
 print(struct BarnesHut *q, struct Node *n, void *f0)
 {
     FILE *f;
-    (void)q;
+    double xl;
+    double xh;
+    double yl;
+    double yh;
+
+    (void) q;
 
     f = f0;
 
+    xl = n->x - n->w / 2;
+    xh = n->x + n->w / 2;
+    yl = n->y - n->w / 2;
+    yh = n->y + n->w / 2;
     if (n->elm[NE] == NULL && n->elm[NW] == NULL
         && n->elm[SW] == NULL && n->elm[SE] == NULL) {
-        if (fprintf(f, "%.16g %.16g\n", n->xl, n->yl) < 0)
+        if (fprintf(f, "%.16g %.16g\n", xl, yl) < 0)
             return 1;
-        if (fprintf(f, "%.16g %.16g\n", n->xh, n->yl) < 0)
+        if (fprintf(f, "%.16g %.16g\n", xh, yl) < 0)
             return 1;
-        if (fprintf(f, "%.16g %.16g\n", n->xh, n->yh) < 0)
+        if (fprintf(f, "%.16g %.16g\n", xh, yh) < 0)
             return 1;
-        if (fprintf(f, "%.16g %.16g\n", n->xl, n->yh) < 0)
+        if (fprintf(f, "%.16g %.16g\n", xl, yh) < 0)
             return 1;
-        if (fprintf(f, "%.16g %.16g\n", n->xl, n->yl) < 0)
+        if (fprintf(f, "%.16g %.16g\n", xl, yl) < 0)
             return 1;
         if (fprintf(f, "\n") < 0)
             return 1;
@@ -122,7 +215,7 @@ print(struct BarnesHut *q, struct Node *n, void *f0)
 }
 
 int
-barnes_hut_print(struct BarnesHut *q, FILE *f)
+barnes_hut_print(struct BarnesHut *q, FILE * f)
 {
     if (q->cnt > 0)
         return walk(q, q->node[0], print, f);
@@ -133,49 +226,34 @@ barnes_hut_print(struct BarnesHut *q, FILE *f)
 static int
 quadrant(struct Node *n, double x, double y)
 {
-    double u;
-    double v;
-
-    u = (n->xl + n->xh) / 2;
-    v = (n->yl + n->yh) / 2;
-    if (x > u)
-        return y > v ? NE : SE;
-    else
-        return y > v ? NW : SW;
+    return (x > n->x) ? (y > n->y) ? NE : SE : (y > n->y) ? NW : SW;
 }
 
 static int
-box(struct Node *n, int i, double *xl, double *xh, double *yl, double *yh)
+box(struct Node *n, int i, double *px, double *py, double *pw)
 {
-    double x;
-    double y;
+    double l;
 
-    x = (n->xl + n->xh) / 2;
-    y = (n->yl + n->yh) / 2;
+    *px = n->x;
+    *py = n->y;
+    *pw = n->w / 2;
+    l = n->w / 4;
     switch (i) {
     case NE:
-        *xl = x;
-        *xh = n->xh;
-        *yl = y;
-        *yh = n->yh;
+        *px += l;
+        *py += l;
         break;
     case SE:
-        *xl = x;
-        *xh = n->xh;
-        *yl = n->yl;
-        *yh = y;
+        *px += l;
+        *py -= l;
         break;
     case NW:
-        *xl = n->xl;
-        *xh = x;
-        *yl = y;
-        *yh = n->yh;
+        *px -= l;
+        *py += l;
         break;
     case SW:
-        *xl = n->xl;
-        *xh = x;
-        *yl = n->yl;
-        *yh = y;
+        *px -= l;
+        *py -= l;
         break;
     }
     return 0;
@@ -214,17 +292,17 @@ insert(struct BarnesHut *q, struct Node *root, double x, double y,
 
     if (root->elm[NE] == NULL && root->elm[NW] == NULL
         && root->elm[SW] == NULL && root->elm[SE] == NULL) {
-        i = quadrant(root, root->x, root->y);
+        i = quadrant(root, root->mx, root->my);
         if ((no = node_ini(q)) == NULL) {
             fprintf(stderr, "%s:%d: node_ini failed\n", __FILE__,
                     __LINE__);
             return 1;
         }
         no->m = root->m;
-        no->x = root->x;
-        no->y = root->y;
+        no->mx = root->mx;
+        no->my = root->my;
         no->id = root->id;
-        box(root, i, &no->xl, &no->xh, &no->yl, &no->yh);
+        box(root, i, &no->x, &no->y, &no->w);
         root->elm[i] = no;
         insert(q, root, x, y, m, id);
     } else {
@@ -236,33 +314,34 @@ insert(struct BarnesHut *q, struct Node *root, double x, double y,
                 return 1;
             }
             no->m = m;
-            no->x = x;
-            no->y = y;
+            no->mx = x;
+            no->my = y;
             no->id = id;
-            box(root, i, &no->xl, &no->xh, &no->yl, &no->yh);
+            box(root, i, &no->x, &no->y, &no->w);
             root->elm[i] = no;
         } else
             insert(q, root->elm[i], x, y, m, id);
-        root->x = (root->x + x * m) / (root->m + m);
-        root->y = (root->y + y * m) / (root->m + m);
+        root->mx = (root->mx + x * m) / (root->m + m);
+        root->my = (root->my + y * m) / (root->m + m);
     }
     return 0;
 }
 
 static int
-walk(struct BarnesHut *q, struct Node *node, int (*fun)(struct BarnesHut *, struct Node *, void *data), void *data)
+walk(struct BarnesHut *q, struct Node *node,
+     int (*fun)(struct BarnesHut *, struct Node *, void *data), void *data)
 {
+    int i;
+    int j;
+
     if (node != NULL) {
         if (fun(q, node, data) != 0)
             return 1;
-        if (walk(q, node->elm[NE], fun, data) != 0)
-            return 1;
-        if (walk(q, node->elm[SE], fun, data) != 0)
-            return 1;
-        if (walk(q, node->elm[NW], fun, data) != 0)
-            return 1;
-        if (walk(q, node->elm[SW], fun, data) != 0)
-            return 1;        
+        for (i = 0; i < (int) (sizeof Dir / sizeof *Dir); i++) {
+            j = Dir[i];
+            if (walk(q, node->elm[j], fun, data) != 0)
+                return 1;
+        }
     }
     return 0;
 }
