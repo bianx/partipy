@@ -35,7 +35,7 @@ BEGIN {
     yl = -1
     yh = 1
     for (i = 0; i < n; i++)
-	print uniform(xl, xh), uniform(yl, yh)
+	print uniform(xl, xh), uniform(yl, yh), 10.0
 }
 
 function uniform(a, b) {

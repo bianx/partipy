@@ -93,8 +93,8 @@ barnes_hut_insert(struct BarnesHut *q, double x, double y, double m,
             return 1;
         }
         no->m = m;
-        no->mx = x;
-        no->my = y;
+        no->mx = m * x;
+        no->my = m * y;
         no->id = id;
         no->x = q->x;
         no->y = q->y;
@@ -229,11 +229,10 @@ trace(struct Node *n, int coarse, void *p0)
     double m;
 
     (void) coarse;
-
     p = p0;
     m = n->m;
-    p->x[p->cnt] = m == 0 ? n->mx / m : 0;
-    p->y[p->cnt] = m == 0 ? n->my / m : 0;
+    p->x[p->cnt] = m != 0 ? n->mx / m : 0;
+    p->y[p->cnt] = m != 0 ? n->my / m : 0;
     p->m[p->cnt] = n->m;
     p->cnt++;
     return 0;
@@ -249,9 +248,7 @@ print(struct BarnesHut *q, struct Node *n, void *f0)
     double yh;
 
     (void) q;
-
     f = f0;
-
     xl = n->x - n->w / 2;
     xh = n->x + n->w / 2;
     yl = n->y - n->w / 2;
@@ -374,15 +371,15 @@ insert(struct BarnesHut *q, struct Node *root, double x, double y,
                 return 1;
             }
             no->m = m;
-            no->mx = x;
-            no->my = y;
+            no->mx = m * x;
+            no->my = m * y;
             no->id = id;
             box(root, i, &no->x, &no->y, &no->w);
             root->elm[i] = no;
         } else
             insert(q, root->elm[i], x, y, m, id);
-        root->mx += x * m;
-        root->my += y * m;
+        root->mx += m * x;
+        root->my += m * y;
         root->m += m;
     }
     return 0;

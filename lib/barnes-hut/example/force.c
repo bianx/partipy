@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <barnes-hut.h>
@@ -15,12 +16,23 @@ usg(void)
 static int
 function(double x, double y, double *fx, double *fy, void *data)
 {
-    (void) x;
-    (void) y;
+    double f;
+    double r;
+    double r2;
+
     (void) data;
 
-    *fx = 1;
-    *fy = 0;
+    r2 = x * x + y * y;
+    if (r2 == 0) {
+        fprintf(stderr, "%s: r2 == 0\n", me);
+        return 1;
+    }
+
+    f = 1 / r2;
+    r = sqrt(r2);
+
+    *fx = f * x / r;
+    *fy = f * y / r;
     return 0;
 }
 
@@ -33,7 +45,7 @@ main(int argc, char **argv)
     double fy;
     double fy0;
     double *m;
-    double mass;
+    double *mass;
     double theta;
     double *u;
     double *v;
@@ -49,9 +61,10 @@ main(int argc, char **argv)
     long cap;
     long cnt;
     long i;
-    long j;
     long n;
     struct BarnesHut *barnes_hut;
+    struct BarnesHutInfo *info;
+    struct BarnesHutInfo *in;
 
     (void) argc;
 
@@ -109,6 +122,10 @@ main(int argc, char **argv)
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         exit(1);
     }
+    if ((mass = malloc(cap * sizeof(*mass))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(1);
+    }
     if ((barnes_hut = barnes_hut_ini(xc, yc, w)) == NULL) {
         fprintf(stderr, "%s:%d: barnes_hut_ini failed\n", __FILE__,
                 __LINE__);
@@ -119,20 +136,26 @@ main(int argc, char **argv)
     while (fgets(line, SIZE, stdin) != NULL) {
         if (n == cap) {
             cap *= 2;
-            x = realloc(x, cap * sizeof(*x));
+            x = realloc(x, cap * sizeof *x);
             if (x == NULL) {
                 fprintf(stderr, "%s:%d: realloc failed\n", __FILE__,
                         __LINE__);
                 exit(1);
             }
-            y = realloc(y, cap * sizeof(*y));
+            y = realloc(y, cap * sizeof *y);
             if (y == NULL) {
                 fprintf(stderr, "%s:%d: realloc failed\n", __FILE__,
                         __LINE__);
                 exit(1);
             }
+            mass = realloc(mass, cap * sizeof *mass);
+            if (mass == NULL) {
+                fprintf(stderr, "%s:%d: realloc failed\n", __FILE__,
+                        __LINE__);
+                exit(1);
+            }
         }
-        if (sscanf(line, "%lf %lf\n", &x[n], &y[n]) != 2) {
+        if (sscanf(line, "%lf %lf %lf\n", &x[n], &y[n], &mass[n]) != 3) {
             fprintf(stderr, "%s: fail to parse '%s'\n", me, line);
             exit(1);
         }
@@ -151,24 +174,41 @@ main(int argc, char **argv)
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         exit(1);
     }
+    if ((info = malloc(n * sizeof(*info))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(1);
+    }
 
-    mass = 1;
     for (i = 0; i < n; i++)
-        barnes_hut_insert(barnes_hut, x[i], y[i], mass, i);
+        barnes_hut_insert(barnes_hut, x[i], y[i], mass[i], i);
     barnes_hut_interaction(barnes_hut, theta, -1, xp, yp, &cnt, u, v, m);
+    barnes_hut_info(barnes_hut, theta, -1, xp, yp, &cnt, info);
 
     fx = 0;
     fy = 0;
-    for (j = 0; j < cnt; j++) {
-        function(xp - u[j], yp - u[j], &fx0, &fy0, NULL);
-        fx += m[j] * fx0;
-        fy += m[j] * fy0;
+    fprintf(stderr, "%s: cnt = %ld / %ld\n", me, cnt, n);
+    for (i = 0; i < cnt; i++) {
+        in = &info[i];
+        function(xp - in->mx / in->m, yp - in->my / in->m, &fx0, &fy0,
+                 NULL);
+        fx += in->m * fx0;
+        fy += in->m * fy0;
     }
+    printf("%.16e %.16e\n", fx, fy);
 
+    fx = 0;
+    fy = 0;
+    for (i = 0; i < n; i++) {
+        function(xp - x[i], yp - y[i], &fx0, &fy0, NULL);
+        fx += mass[i] * fx0;
+        fy += mass[i] * fy0;
+    }
     printf("%.16e %.16e\n", fx, fy);
 
     free(x);
     free(y);
+    free(mass);
+    free(info);
     free(u);
     free(v);
     free(m);

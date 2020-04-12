@@ -51,7 +51,7 @@ BEGIN {
 		break
 	    }
 	if (Accept) {
-	    print u, v
+	    print u, v, 10
 	    i++
 	}
     }
