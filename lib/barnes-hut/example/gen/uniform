@@ -1,0 +1,45 @@
+#!/bin/sh
+
+me=barnes-hut/example/gen/uniform
+
+n=
+while test $# -ne 0
+do case "$1" in
+       -h) echo >&2 "$me -n number [-c count |-a fraction]"
+           exit 1
+           ;;
+       -n) shift
+	   if test $# -eq 0
+	   then printf >&2 "%s: -n needs an argument\n" $me
+		exit 1
+	   fi
+	   n=$1
+	   shift
+	   ;;
+       -*) printf "%s: unknown option '%s'\n" $me "$1"
+	   exit 1
+	   ;;
+   esac
+done
+
+if test -z "$n"
+then printf >&2 "%s: -n is not set\n" $me
+     exit 1
+fi
+
+
+"${AWK=awk}" -v n="$n" '
+BEGIN {
+    xl = -1
+    xh = 1
+    yl = -1
+    yh = 1
+    for (i = 0; i < n; i++)
+	print uniform(xl, xh), uniform(yl, yh)
+}
+
+function uniform(a, b) {
+    return a + (b - a)*rand()
+}
+
+'

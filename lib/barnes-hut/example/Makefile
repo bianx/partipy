@@ -2,10 +2,10 @@
 .SUFFIXES: .o .c
 include ../../../conf.mk
 M_CFLAGS = -I..
-M_LDFLAGS = -L.. -lquadtree
+M_LDFLAGS = -L.. -lbarnes-hut
 
 M = \
-main\
+print\
 
 all: $M
 .c.o:; $(CC) -c $(CFLAGS) $(M_CFLAGS) $<
