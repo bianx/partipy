@@ -2,7 +2,7 @@
 
 me=barnes-hut/example/gen/uniform
 
-n=
+n= m=10
 while test $# -ne 0
 do case "$1" in
        -h) echo >&2 "$me -n number [-c count |-a fraction]"
@@ -16,6 +16,14 @@ do case "$1" in
 	   n=$1
 	   shift
 	   ;;
+       -m) shift
+	   if test $# -eq 0
+	   then printf >&2 "%s: -m needs an argument\n" $me
+		exit 1
+	   fi
+	   m=$1
+	   shift
+	   ;;       
        -*) printf "%s: unknown option '%s'\n" $me "$1"
 	   exit 1
 	   ;;
@@ -27,15 +35,15 @@ then printf >&2 "%s: -n is not set\n" $me
      exit 1
 fi
 
-
-"${AWK=awk}" -v n="$n" '
+"${AWK=awk}" -v n="$n" -v m="$m" '
 BEGIN {
-    xl = -1
-    xh = 1
+    srand(ENVIRON["SEED"])
+    xl = -0.75
+    xh = 0.75
     yl = -1
     yh = 1
     for (i = 0; i < n; i++)
-	print uniform(xl, xh), uniform(yl, yh), 10.0
+	printf "%.16e %.16e %.16e\n", uniform(xl, xh), uniform(yl, yh), m
 }
 
 function uniform(a, b) {

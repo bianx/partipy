@@ -1,5 +1,8 @@
 struct BarnesHut;
+
 struct BarnesHut *barnes_hut_ini(double, double, double);
+struct BarnesHut *barnes_hut_build(long, const double *, const double *, const double *);
+
 int barnes_hut_fin(struct BarnesHut *);
 int barnes_hut_insert(struct BarnesHut *, double, double, double, long);
 

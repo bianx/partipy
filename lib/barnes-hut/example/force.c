@@ -49,12 +49,9 @@ main(int argc, char **argv)
     double theta;
     double *u;
     double *v;
-    double w;
     double *x;
-    double xc;
     double xp;
     double *y;
-    double yc;
     double yp;
     int Pflag;
     int Tflag;
@@ -68,9 +65,6 @@ main(int argc, char **argv)
 
     (void) argc;
 
-    xc = 0;
-    yc = 0;
-    w = 2;
     Pflag = Tflag = 0;
     while (*++argv != NULL && argv[0][0] == '-')
         switch (argv[0][1]) {
@@ -126,12 +120,6 @@ main(int argc, char **argv)
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         exit(1);
     }
-    if ((barnes_hut = barnes_hut_ini(xc, yc, w)) == NULL) {
-        fprintf(stderr, "%s:%d: barnes_hut_ini failed\n", __FILE__,
-                __LINE__);
-        exit(1);
-    }
-
     n = 0;
     while (fgets(line, SIZE, stdin) != NULL) {
         if (n == cap) {
@@ -178,9 +166,11 @@ main(int argc, char **argv)
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         exit(1);
     }
-
-    for (i = 0; i < n; i++)
-        barnes_hut_insert(barnes_hut, x[i], y[i], mass[i], i);
+    if ((barnes_hut = barnes_hut_build(n, x, y, mass)) == NULL) {
+        fprintf(stderr, "%s:%d: barnes_hut_ini failed\n", __FILE__,
+                __LINE__);
+        exit(1);
+    }
     barnes_hut_interaction(barnes_hut, theta, -1, xp, yp, &cnt, u, v, m);
     barnes_hut_info(barnes_hut, theta, -1, xp, yp, &cnt, info);
 

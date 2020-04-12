@@ -1,7 +1,7 @@
 #!/bin/sh
 
 me=barnes-hut/example/gen/cluster
-n=
+n= m=10
 cluster='0 0 0.3   0.5 0.5 0.4   0.5 -0.5 0.2   -0.5 0.5 0.2  -0.5 -0.5 0.35'
 while test $# -ne 0
 do case "$1" in
@@ -16,6 +16,14 @@ do case "$1" in
 	   n=$1
 	   shift
 	   ;;
+       -m) shift
+	   if test $# -eq 0
+	   then printf >&2 "%s: -m needs an argument\n" $me
+		exit 1
+	   fi
+	   m=$1
+	   shift
+	   ;;	    
        -*) printf >&2 "%s: unknown option '%s'\n" $me "$1"
 	   exit 1
 	   ;;
@@ -26,9 +34,10 @@ then printf >&2 "%s: -n is not set\n" $me
      exit 1
 fi
 
-"${AWK=awk}" -v n="$n" -v cluster="$cluster" '
+"${AWK=awk}" -v n="$n" -v mass="$m" -v cluster="$cluster" '
 BEGIN {
     # [xcetner ycenter radius] ..
+    srand(ENVIRON["SEED"])
     xl = -1
     xh = 1
     yl = -1
@@ -51,7 +60,7 @@ BEGIN {
 		break
 	    }
 	if (Accept) {
-	    print u, v, 10
+	    printf "%.16e %.16e %.16e\n", u, v, mass
 	    i++
 	}
     }

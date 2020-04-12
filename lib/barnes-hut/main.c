@@ -69,6 +69,61 @@ barnes_hut_ini(double x, double y, double w)
     return q;
 }
 
+static double
+max(double a, double b)
+{
+    return a > b ? a : b;
+}
+
+static double
+min(double a, double b)
+{
+    return a < b ? a : b;
+}
+
+struct BarnesHut *
+barnes_hut_build(long n, const double *x, const double *y, const double *m)
+{
+    double w;
+    double xc;
+    double xh;
+    double xl;
+    double yc;
+    double yh;
+    double yl;
+    long i;
+    struct BarnesHut *q;
+
+    if (n < 1) {
+        fprintf(stderr, "%s:%d: n < 1\n", __FILE__, __LINE__);
+        return NULL;
+    }
+
+    xl = xh = x[0];
+    yl = yh = y[0];
+    for (i = 1; i < n; i++) {
+        xl = min(xl, x[i]);
+        xh = max(xh, x[i]);
+        yl = min(yl, y[i]);
+        yh = max(yh, y[i]);        
+    }
+    w = max(xh - xl, yh - yl);
+    xc = (xl + xh)/2;
+    yc = (yl + yh)/2;
+
+    if ((q = barnes_hut_ini(xc, yc, w)) == NULL) {
+        fprintf(stderr, "%s:%d: barnes_hut_ini failed\n", __FILE__, __LINE__);
+        return NULL;
+    }
+
+    for (i = 0; i < n; i++)
+        if (barnes_hut_insert(q, x[i], y[i], m[i], i) != 0) {
+            fprintf(stderr, "%s:%d: barnes_hut_insert failed\n", __FILE__, __LINE__);
+            return NULL;            
+        }
+    return q;
+}
+
 int
 barnes_hut_fin(struct BarnesHut *q)
 {
@@ -233,7 +288,7 @@ trace(struct Node *n, int coarse, void *p0)
     m = n->m;
     p->x[p->cnt] = m != 0 ? n->mx / m : 0;
     p->y[p->cnt] = m != 0 ? n->my / m : 0;
-    p->m[p->cnt] = n->m;
+    p->m[p->cnt] = m;
     p->cnt++;
     return 0;
 }
@@ -346,10 +401,14 @@ insert(struct BarnesHut *q, struct Node *root, double x, double y,
 {
     int i;
     struct Node *no;
+    double xc;
+    double yc;
 
     if (root->elm[NE] == NULL && root->elm[NW] == NULL
         && root->elm[SW] == NULL && root->elm[SE] == NULL) {
-        i = quadrant(root, root->mx, root->my);
+        xc = root->m == 0 ? root->mx : root->mx / root->m;
+        yc = root->m == 0 ? root->my : root->my / root->m;
+        i = quadrant(root, xc, yc);
         if ((no = node_ini(q)) == NULL) {
             fprintf(stderr, "%s:%d: node_ini failed\n", __FILE__,
                     __LINE__);

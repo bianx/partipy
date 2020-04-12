@@ -35,16 +35,13 @@ int
 main(int argc, char **argv)
 {
     char line[SIZE];
-    double mass;
+    double *mass;
     double theta;
-    double w;
     double *x;
-    double xc;
     double xh;
     double xl;
     double xp;
     double *y;
-    double yc;
     double yh;
     double yl;
     double yp;
@@ -58,12 +55,10 @@ main(int argc, char **argv)
     int output;
     struct BarnesHut *barnes_hut;
     struct BarnesHutInfo *info;
+    const struct BarnesHutInfo *in;
 
     (void) argc;
 
-    xc = 0;
-    yc = 0;
-    w = 2;
     theta = 1;
 
     Pflag = Tflag = Oflag = 0;
@@ -137,34 +132,38 @@ main(int argc, char **argv)
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         exit(1);
     }
-    if ((y = malloc(cap * sizeof(*y))) == NULL) {
+    if ((y = malloc(cap * sizeof *y)) == NULL) {
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         exit(1);
     }
-    if ((barnes_hut = barnes_hut_ini(xc, yc, w)) == NULL) {
-        fprintf(stderr, "%s:%d: barnes_hut_ini failed\n", __FILE__,
-                __LINE__);
+    if ((mass = malloc(cap * sizeof *mass)) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         exit(1);
-    }
-
+    }    
     n = 0;
     while (fgets(line, SIZE, stdin) != NULL) {
         if (n == cap) {
             cap *= 2;
-            x = realloc(x, cap * sizeof(*x));
+            x = realloc(x, cap * sizeof *x);
             if (x == NULL) {
                 fprintf(stderr, "%s:%d: realloc failed\n", __FILE__,
                         __LINE__);
                 exit(1);
             }
-            y = realloc(y, cap * sizeof(*y));
+            y = realloc(y, cap * sizeof *y);
             if (y == NULL) {
                 fprintf(stderr, "%s:%d: realloc failed\n", __FILE__,
                         __LINE__);
                 exit(1);
             }
+            mass = realloc(mass, cap * sizeof *mass);
+            if (mass == NULL) {
+                fprintf(stderr, "%s:%d: realloc failed\n", __FILE__,
+                        __LINE__);
+                exit(1);
+            }            
         }
-        if (sscanf(line, "%lf %lf\n", &x[n], &y[n]) != 2) {
+        if (sscanf(line, "%lf %lf %lf\n", &x[n], &y[n], &mass[n]) != 3) {
             fprintf(stderr, "%s: fail to parse '%s'\n", me, line);
             exit(1);
         }
@@ -174,14 +173,12 @@ main(int argc, char **argv)
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         exit(1);
     }
-
-    mass = 1;
-    for (i = 0; i < n; i++)
-        barnes_hut_insert(barnes_hut, x[i], y[i], mass, i);
+    if ((barnes_hut = barnes_hut_build(n, x, y, mass)) == NULL) {
+        fprintf(stderr, "%s:%d: barnes_hut_ini failed\n", __FILE__,
+                __LINE__);
+        exit(1);
+    }
     barnes_hut_info(barnes_hut, theta, -1, xp, yp, &cnt, info);
-
-    struct BarnesHutInfo *in;
-
     for (i = 0; i < cnt; i++) {
         in = &info[i];
         switch (output) {
@@ -189,6 +186,7 @@ main(int argc, char **argv)
             printf("%.16g %.16g\n", xp, yp);
             printf("%.16g %.16g\n", in->mx / in->m, in->my / in->m);
             printf("\n");
+            break;
         case LEAF:
             if (!in->Coarse) {
                 xl = in->x - in->w / 2;
