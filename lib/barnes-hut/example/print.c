@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <barnes-hut.h>
 
-static const char *me = "barnes_hut/example/main";
+static const char *me = "barnes_hut/example/print";
 enum { SIZE = 999 };
 
 static void
@@ -52,7 +52,7 @@ main(int argc, char **argv)
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         exit(1);
     }
-    if ((barnes_hut = barnes_hut_ini(xc, xc, w)) == NULL) {
+    if ((barnes_hut = barnes_hut_ini(xc, yc, w)) == NULL) {
         fprintf(stderr, "%s:%d: barnes_hut_ini failed\n", __FILE__,
                 __LINE__);
         exit(1);
@@ -83,11 +83,11 @@ main(int argc, char **argv)
     }
 
     long i;
-    for (i = 0; i < n; i ++) {
+
+    for (i = 0; i < n; i++)
         barnes_hut_insert(barnes_hut, x[i], y[i], mass, i);
-    }
     barnes_hut_print(barnes_hut, stdout);
-    
+
     free(x);
     free(y);
     barnes_hut_fin(barnes_hut);

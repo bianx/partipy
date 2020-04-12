@@ -1,0 +1,65 @@
+#!/bin/sh
+
+me=barnes-hut/example/gen/cluster
+n=
+cluster='0 0 0.3   0.5 0.5 0.4   0.5 -0.5 0.2   -0.5 0.5 0.2  -0.5 -0.5 0.35'
+while test $# -ne 0
+do case "$1" in
+       -h) echo >&2 "$me -n number -a fraction [-c cluster]"
+           exit 1
+           ;;
+       -n) shift
+	   if test $# -eq 0
+	   then printf >&2 "%s: -n needs an argument\n" $me
+		exit 1
+	   fi
+	   n=$1
+	   shift
+	   ;;
+       -*) printf >&2 "%s: unknown option '%s'\n" $me "$1"
+	   exit 1
+	   ;;
+   esac
+done
+if test -z "$n"
+then printf >&2 "%s: -n is not set\n" $me
+     exit 1
+fi
+
+"${AWK=awk}" -v n="$n" -v cluster="$cluster" '
+BEGIN {
+    # [xcetner ycenter radius] ..
+    xl = -1
+    xh = 1
+    yl = -1
+    yh = 1
+
+    m = split(cluster, cluster0)/3
+    for (i = j = 0; i < m; i++) {
+	x[i] = cluster0[++j]
+	y[i] = cluster0[++j]
+	r[i] = cluster0[++j]
+    }
+
+    for (i = 0; i < n;) {
+	u = uniform(xl, xh)
+	v = uniform(yl, yh)
+	Accept = 0
+	for (j = 0; j < m; j++)
+	    if ( (u - x[j])^2 + (v - y[j])^2 < r[j]^2) {
+		Accept = 1
+		break
+	    }
+	if (Accept) {
+	    print u, v
+	    i++
+	}
+    }
+
+}
+
+function uniform(a, b) {
+    return a + (b - a)*rand()
+}
+
+'

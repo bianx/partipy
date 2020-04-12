@@ -25,6 +25,20 @@ struct BarnesHut {
     struct Node **node;
 };
 
+struct InfoParam {
+    struct BarnesHutInfo *info;
+    long cnt;
+};
+
+struct Param {
+    double *x;
+    double *y;
+    double *m;
+    long cnt;
+};
+
+static int trace(struct Node *, int, void *);
+static int info(struct Node *, int, void *);
 static int quadrant(struct Node *, double, double);
 static int box(struct Node *, int, double *, double *, double *);
 static struct Node *node_ini(struct BarnesHut *);
@@ -95,61 +109,51 @@ barnes_hut_insert(struct BarnesHut *q, double x, double y, double m,
     return 0;
 }
 
-static int
-force(struct Node *n, double theta2,
-      int (*function)(double, double, double *, double *,
-                      void *), long id, double x, double y, double *fx,
-      double *fy, void *data)
+static double
+sq(double x)
 {
-    double dx;
-    double dy;
+    return x * x;
+}
+
+static int
+force(struct Node *n, double theta, int (*fun)(struct Node *, int, void *),
+      long id, double x, double y, void *data)
+{
     double r2;
     double w2;
-    double u;
-    double v;
     int i;
     int j;
+    int Coarse;
 
-    dx = x - n->x;
-    dy = y - n->y;
-    r2 = dx * dx + dy * dy;
+    r2 = sq(x - n->mx / n->m) + sq(y - n->my / n->m);
     w2 = n->w * n->w;
+    Coarse = w2 < theta * theta * r2;
     if (n->elm[NE] == NULL && n->elm[NW] == NULL && n->elm[SW] == NULL
         && n->elm[SE] == NULL) {
         if (id != n->id) {
-            if (function(dx, dy, &u, &v, data)) {
+            if (fun(n, Coarse, data)) {
                 fprintf(stderr, "%s:%d: function() failed\n", __FILE__,
                         __LINE__);
                 return 1;
             }
-            *fx = n->m * u;
-            *fy = n->m * v;
         }
     } else {
-        if (w2 < theta2 * r2) {
-            if (function(dx, dy, &u, &v, data)) {
+        if (Coarse) {
+            if (fun(n, Coarse, data)) {
                 fprintf(stderr, "%s:%d: function() failed\n", __FILE__,
                         __LINE__);
                 return 1;
             }
-            *fx = n->m * u;
-            *fy = n->m * v;
         } else {
-            *fx = 0;
-            *fy = 0;
             for (i = 0; i < (int) (sizeof Dir / sizeof *Dir); i++) {
                 j = Dir[i];
                 if (n->elm[j] != NULL) {
-                    if (force
-                        (n->elm[j], theta2, function, id, x, y, &u, &v,
-                         data)) {
+                    if (force(n->elm[j], theta, fun, id, x, y, data)) {
                         fprintf(stderr, "%s:%d: function() failed\n",
                                 __FILE__, __LINE__);
                         return 1;
                     }
                 }
-                *fx += u;
-                *fy += v;
             }
         }
     }
@@ -158,24 +162,80 @@ force(struct Node *n, double theta2,
 
 
 int
-barnes_hut_force(struct BarnesHut *q, double theta,
-                 int (*function)(double, double, double *, double *,
-                                 void *), long id, double x, double y,
-                 double *fx, double *fy, void *data)
+barnes_hut_interaction(struct BarnesHut *q, double theta,
+                       long id, double x, double y, long *cnt, double *px,
+                       double *py, double *m)
 {
-    double u;
-    double v;
+    struct Param param;
 
+    param.cnt = 0;
+    param.x = px;
+    param.y = py;
+    param.m = m;
     if (q->cnt > 0) {
-        if (force
-            (q->node[0], theta * theta, function, id, x, y, &u, &v,
-             data) != 0) {
+        if (force(q->node[0], theta, trace, id, x, y, &param) != 0) {
             fprintf(stderr, "%s:%d: force() failed\n", __FILE__, __LINE__);
             return 1;
         }
     }
-    *fx = u;
-    *fy = v;
+    *cnt = param.cnt;
+    return 0;
+}
+
+int
+barnes_hut_info(struct BarnesHut *q, double theta,
+                long id, double x, double y, long *cnt,
+                struct BarnesHutInfo *info0)
+{
+    struct InfoParam param;
+
+    param.cnt = 0;
+    param.info = info0;
+    if (q->cnt > 0) {
+        if (force(q->node[0], theta, info, id, x, y, &param) != 0) {
+            fprintf(stderr, "%s:%d: force() failed\n", __FILE__, __LINE__);
+            return 1;
+        }
+    }
+    *cnt = param.cnt;
+    return 0;
+}
+
+static int
+info(struct Node *n, int coarse, void *p0)
+{
+    struct BarnesHutInfo info;
+    struct InfoParam *p;
+
+    p = p0;
+    info.id = n->id;
+    info.m = n->m;
+    info.mx = n->mx;
+    info.my = n->my;
+    info.w = n->w;
+    info.x = n->x;
+    info.y = n->y;
+    info.Leaf = n->elm[NE] == NULL && n->elm[NW] == NULL
+        && n->elm[SW] == NULL && n->elm[SE] == NULL;
+    info.Coarse = coarse;
+    p->info[p->cnt++] = info;
+    return 0;
+}
+
+static int
+trace(struct Node *n, int coarse, void *p0)
+{
+    struct Param *p;
+    double m;
+
+    (void) coarse;
+
+    p = p0;
+    m = n->m;
+    p->x[p->cnt] = m == 0 ? n->mx / m : 0;
+    p->y[p->cnt] = m == 0 ? n->my / m : 0;
+    p->m[p->cnt] = n->m;
+    p->cnt++;
     return 0;
 }
 
@@ -321,8 +381,9 @@ insert(struct BarnesHut *q, struct Node *root, double x, double y,
             root->elm[i] = no;
         } else
             insert(q, root->elm[i], x, y, m, id);
-        root->mx = (root->mx + x * m) / (root->m + m);
-        root->my = (root->my + y * m) / (root->m + m);
+        root->mx += x * m;
+        root->my += y * m;
+        root->m += m;
     }
     return 0;
 }
