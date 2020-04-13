@@ -108,7 +108,8 @@ static int ode_ini(char **, struct OdeParam *, struct Ode **);
 static int ode_step(struct Ode *, int n, real * z);
 static int ode_fin(struct Ode *);
 
-static int remesh_m4(void *, int *, real *, real *, real *);
+static int remesh_m4_n2(void *, int *, real *, real *, real *);
+static int remesh_m4_bh(void *, int *, real *, real *, real *);
 static int remesh_psi(void *, int *, real *, real *, real *);
 
 struct PsiParam {
@@ -204,7 +205,6 @@ main(int argc, char **argv)
     core = NULL;
     scheme = NULL;
     nremesh = 0;
-    remesh = remesh_psi;
     grid = null_grid;
     nx = ny = 0;
     while (*++argv != NULL && argv[0][0] == '-')
@@ -221,6 +221,7 @@ main(int argc, char **argv)
             if (strncmp(argv[0], "n2", SIZE) == 0) {
                 algorithm = algorithm_n2;
                 particle = particle_n2;
+                remesh = remesh_m4_n2;
             } else if (strncmp(argv[0], "bh", SIZE) == 0) {
                 argv++;
                 if (argv[0] == NULL) {
@@ -232,6 +233,7 @@ main(int argc, char **argv)
                 Theta = atof(argv[0]);
                 algorithm = algorithm_bh;
                 particle = particle_bh;
+                remesh = remesh_m4_bh;
             } else {
                 fprintf(stderr, "%s: unknown algorithm '%s'\n", me,
                         argv[0]);
@@ -1263,7 +1265,7 @@ m4p(real cutoff, real x)
 }
 
 static int
-remesh_m4(void *p0, int *pn, real * x, real * y, real * ksi)
+remesh_m4_n2(void *p0, int *pn, real * x, real * y, real * ksi)
 {
     int i;
     int j;
@@ -1349,6 +1351,122 @@ remesh_m4(void *p0, int *pn, real * x, real * y, real * ksi)
         }
     *pn = j;
     free(ksi0);
+    return 0;
+}
+
+static int
+remesh_m4_bh(void *p0, int *pn, real * x, real * y, real * ksi)
+{
+    int i;
+    int j;
+    int k;
+    int l;
+    int m;
+    int n;
+    int nx;
+    int ny;
+    long cnt;
+    real coef;
+    real dx;
+    real dy;
+    real eps;
+    real *ksi0;
+    real *ksi00;
+    real ksi_m;
+    real u;
+    real v;
+    real *x0;
+    real xhi;
+    real xlo;
+    real *y0;
+    real yhi;
+    real ylo;
+    struct BarnesHut *barnes_hut;
+    struct RemeshParam *p;
+
+    n = *pn;
+    if ((x0 = malloc(n * sizeof *x0)) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        return 1;
+    }
+    if ((y0 = malloc(n * sizeof *y0)) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        return 1;
+    }
+    if ((ksi00 = malloc(n * sizeof *ksi00)) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        return 1;
+    }
+    if ((barnes_hut = barnes_hut_build(n, x, y, ksi)) == NULL) {
+        fprintf(stderr, "%s: barnes_hut_build failed\n", me);
+        return 1;
+    }
+
+    
+    p = p0;
+    nx = p->nx;
+    ny = p->ny;
+    xlo = p->xlo;
+    xhi = p->xhi;
+    ylo = p->ylo;
+    yhi = p->yhi;
+    eps = p->eps;
+
+    dx = (xhi - xlo) / nx;
+    dy = (yhi - ylo) / ny;
+    m = nx * ny;
+    if ((ksi0 = malloc(m * sizeof(*ksi0))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
+
+    l = 0;
+    for (i = 0; i < nx; i++) {
+        u = xlo + (i + 0.5) * dx;
+        for (j = 0; j < ny; j++) {
+            v = ylo + (j + 0.5) * dy;
+            ksi0[l] = 0;
+            if (barnes_hut_interaction
+                (barnes_hut, Theta, -1, u, v, &cnt, x0, y0, ksi00) != 0) {
+                fprintf(stderr, "%s: barnes_hut_interaction failed\n", me);
+                return 1;
+            }
+            for (k = 0; k < cnt; k++)
+                ksi0[l] += ksi00[k] * m4(dx, x0[k] - u) * m4(dy, y0[k] - v);
+            l++;
+        }
+    }
+    coef = dx * dy;
+    for (i = 0; i < m; i++)
+        ksi[i] = ksi0[i] * coef;
+
+    ksi_m = ksi[0];
+    for (i = 0; i < m; i++)
+        if (ksi[i] > ksi_m)
+            ksi_m = ksi[i];
+    l = 0;
+    for (i = 0; i < nx; i++) {
+        u = xlo + (i + 0.5) * dx;
+        for (j = 0; j < ny; j++) {
+            v = ylo + (j + 0.5) * dy;
+            x[l] = u;
+            y[l] = v;
+            l++;
+        }
+    }
+    j = 0;
+    for (i = 0; i < m; i++)
+        if (fabs(ksi[i]) > ksi_m * eps) {
+            x[j] = x[i];
+            y[j] = y[i];
+            ksi[j] = ksi[i];
+            j++;
+        }
+    *pn = j;
+    free(x0);
+    free(y0);
+    free(ksi0);
+    free(ksi00);
     return 0;
 }
 
