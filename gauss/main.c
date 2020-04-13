@@ -24,6 +24,8 @@ usg(void)
 }
 
 struct Core;
+struct RemeshParam;
+struct Grid;
 static int algorithm_n2(int n, const real *, real *, void *);
 static int algorithm_bh(int n, const real *, real *, void *);
 static int particle_n2(struct Core *, int n, const real * x,
@@ -44,14 +46,45 @@ static real krasny_coef(void *);
 static int j0_dpsi(real, real, real *, real *, void *);
 static real j0_coef(void *);
 
-static int punto_grid(void *, int, const real *, const real *,
-                      const real *, int step);
-static int vtk_grid(void *, int, const real *, const real *,
+static int punto_grid(struct Grid *, void *, int, const real *,
+                      const real *, const real *, int step);
+static int vtk_grid(struct Grid *, void *, int, const real *, const real *,
                     const real *, int step);
-static int null_grid(void *, int, const real *, const real *,
-                     const real *, int step);
+static int null_grid(struct Grid *, void *, int, const real *,
+                     const real *, const real *, int step);
+static int grid_n2_ini(struct RemeshParam *remesh_param);
+static int grid_n2_fin(void);
+static int grid_n2_apply(struct RemeshParam *p, long n, const double *x,
+                         const double *y, const double *ksi, double **px,
+                         double **py, double **pksi);
 
 static real Theta;              /* Barnes-Hat parameter */
+
+
+struct {
+    double *out;
+    double *x;
+    double *y;
+} GridN2;
+
+struct GridBH {
+    double *out;
+    double *x;
+    double *y;
+    double *ksi;
+} GridBH;
+
+struct Grid {
+    int (*ini)(struct RemeshParam *);
+    int (*fin)(void);
+    int (*apply)(struct RemeshParam *, long n, const double *,
+                 const double *, const double *, double **, double **,
+                 double **);
+};
+
+static struct Grid GridAlg[] = {
+    { grid_n2_ini, grid_n2_fin, grid_n2_apply },
+};
 
 struct Core {
     real(*psi) (real, real, void *);
@@ -147,8 +180,8 @@ static const char *GridName[] = {
     "null",
 };
 
-static int (*const Grid[])(void *, int, const real *, const real *,
-                           const real *, int) = {
+static int (*const Grid[])(struct Grid *, void *, int, const real *,
+                           const real *, const real *, int) = {
     punto_grid,
     vtk_grid,
     null_grid,
@@ -163,8 +196,8 @@ main(int argc, char **argv)
     int Dflag;
     int Eflag;
     int every;
-    int (*grid)(void *, int, const real *, const real *, const real *,
-                int);
+    int (*grid)(struct Grid *, void *, int, const real *, const real *,
+                const real *, int);
     int i;
     int j;
     int m;
@@ -491,7 +524,7 @@ main(int argc, char **argv)
                 fprintf(stderr, "%s: write failed\n", me);
                 exit(2);
             }
-            grid(&remesh_param, n, x, y, ksi, i);
+            grid(&GridAlg[0], &remesh_param, n, x, y, ksi, i);
         }
         if (i == m)
             break;
@@ -1402,7 +1435,6 @@ remesh_m4_bh(void *p0, int *pn, real * x, real * y, real * ksi)
         return 1;
     }
 
-    
     p = p0;
     nx = p->nx;
     ny = p->ny;
@@ -1432,7 +1464,8 @@ remesh_m4_bh(void *p0, int *pn, real * x, real * y, real * ksi)
                 return 1;
             }
             for (k = 0; k < cnt; k++)
-                ksi0[l] += ksi00[k] * m4(dx, x0[k] - u) * m4(dy, y0[k] - v);
+                ksi0[l] +=
+                    ksi00[k] * m4(dx, x0[k] - u) * m4(dy, y0[k] - v);
             l++;
         }
     }
@@ -1600,8 +1633,7 @@ particle_bh(struct Core *core, int n, const real * x, const real * y,
 
     if (core->psi == NULL)
         return 0;
-
-        if ((x0 = malloc(n * sizeof *x0)) == NULL) {
+    if ((x0 = malloc(n * sizeof *x0)) == NULL) {
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         return 1;
     }
@@ -1640,86 +1672,49 @@ particle_bh(struct Core *core, int n, const real * x, const real * y,
 }
 
 static int
-punto_grid(void *p0, int n, const real * x, const real * y,
-           const real * ksi, int step)
+punto_grid(struct Grid *grid, void *p0, int n, const real * x,
+           const real * y, const real * ksi, int step)
 {
     FILE *f;
     int i;
-    int j;
-    int k;
-    int l;
-    int m;
     int nx;
     int ny;
-    real dx;
-    real dy;
+    long m;
     real *ksi0;
-    real u;
-    real v;
-    real xhi;
-    real xlo;
-    real yhi;
-    real ylo;
+    real *u;
+    real *v;
     char path[SIZE];
     struct Core *core;
     struct RemeshParam *p;
 
     p = p0;
-    nx = p->nx;
-    ny = p->ny;
-    xlo = p->xlo;
-    xhi = p->xhi;
-    ylo = p->ylo;
-    yhi = p->yhi;
     core = p->core;
-
     if (core->psi == NULL)
         return 0;
-
-    dx = (xhi - xlo) / nx;
-    dy = (yhi - ylo) / ny;
+    nx = p->nx;
+    ny = p->ny;
     m = nx * ny;
-    if ((ksi0 = malloc(m * sizeof(*ksi0))) == NULL) {
-        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
-        exit(2);
-    }
-    for (i = 0; i < m; i++)
-        ksi0[i] = 0;
-    for (k = 0; k < n; k++) {
-        l = 0;
-        for (j = 0; j < ny; j++) {
-            v = ylo + (j + 0.5) * dy;
-            for (i = 0; i < nx; i++) {
-                u = xlo + (i + 0.5) * dx;
-                ksi0[l] +=
-                    ksi[k] * core->psi(x[k] - u, y[k] - v, core->param);
-                l++;
-            }
-        }
-    }
+
     snprintf(path, SIZE, "%06d.grid", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
     if ((f = fopen(path, "w")) == NULL) {
         fprintf(stderr, "%s: fail to open '%s'\n", me, path);
         exit(2);
     }
-    l = 0;
-    for (j = 0; j < ny; j++) {
-        v = ylo + (j + 0.5) * dy;
-        for (i = 0; i < nx; i++) {
-            u = xlo + (i + 0.5) * dx;
-            fprintf(f, "%.16e %.16e %.16e\n", u, v, ksi0[l++]);
-        }
-    }
 
-    free(ksi0);
+    grid->ini(p);
+    grid->apply(p, n, x, y, ksi, &u, &v, &ksi0);
+    for (i = 0; i < m; i++)
+        fprintf(f, "%.16e %.16e %.16e\n", u[i], v[i], ksi0[i]);
+    grid->fin();
+
     fclose(f);
     return 0;
 }
 
 static int
-null_grid(void *p0, int n, const real * x, const real * y,
-          const real * ksi, int step)
+null_grid(struct Grid *grid, void *p0, int n, const real * x,
+          const real * y, const real * ksi, int step)
 {
     (void) p0;
     (void) n;
@@ -1731,8 +1726,8 @@ null_grid(void *p0, int n, const real * x, const real * y,
 }
 
 static int
-vtk_grid(void *p0, int n, const real * x, const real * y, const real * ksi,
-         int step)
+vtk_grid(struct Grid *grid, void *p0, int n, const real * x,
+         const real * y, const real * ksi, int step)
 {
     char path[SIZE];
     FILE *f;
@@ -1747,8 +1742,8 @@ vtk_grid(void *p0, int n, const real * x, const real * y, const real * ksi,
     real dx;
     real dy;
     real *ksi0;
-    real u;
-    real v;
+    real *u;
+    real *v;
     real xhi;
     real xlo;
     real yhi;
@@ -1757,6 +1752,8 @@ vtk_grid(void *p0, int n, const real * x, const real * y, const real * ksi,
     struct RemeshParam *p;
 
     p = p0;
+    grid->ini(p);
+
     nx = p->nx;
     ny = p->ny;
     xlo = p->xlo;
@@ -1764,31 +1761,12 @@ vtk_grid(void *p0, int n, const real * x, const real * y, const real * ksi,
     ylo = p->ylo;
     yhi = p->yhi;
     core = p->core;
-
-    if (core->psi == NULL)
-        return 0;
-
+    m = nx * ny;
     dx = (xhi - xlo) / nx;
     dy = (yhi - ylo) / ny;
-    m = nx * ny;
-    if ((ksi0 = malloc(m * sizeof(*ksi0))) == NULL) {
-        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
-        exit(2);
-    }
-    for (i = 0; i < m; i++)
-        ksi0[i] = 0;
-    for (k = 0; k < n; k++) {
-        l = 0;
-        for (j = 0; j < ny; j++) {
-            v = ylo + (j + 0.5) * dy;
-            for (i = 0; i < nx; i++) {
-                u = xlo + (i + 0.5) * dx;
-                ksi0[l] +=
-                    ksi[k] * core->psi(x[k] - u, y[k] - v, core->param);
-                l++;
-            }
-        }
-    }
+    if (core->psi == NULL)
+        return 0;
+    grid->apply(p, n, x, y, ksi, &u, &v, &ksi0);
     snprintf(path, SIZE, "g.%06d.vtk", step);
     fprintf(stderr, "%s: write '%s'\n", me, path);
     if ((f = fopen(path, "w")) == NULL) {
@@ -1811,7 +1789,93 @@ vtk_grid(void *p0, int n, const real * x, const real * y, const real * ksi,
             "SCALARS omega double\n" "LOOKUP_TABLE DEFAULT\n", m);
     for (i = 0; i < m; i++)
         fprintf(f, "%.16e\n", ksi0[i]);
-    free(ksi0);
     fclose(f);
+    grid->fin();
+    return 0;
+}
+
+static
+    int
+grid_n2_ini(struct RemeshParam *remesh_param)
+{
+    long n;
+
+    n = remesh_param->nx * remesh_param->ny;
+    if ((GridN2.out = malloc(n * sizeof(*GridN2.out))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
+    if ((GridN2.y = malloc(n * sizeof(*GridN2.y))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
+    if ((GridN2.x = malloc(n * sizeof(*GridN2.x))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
+    return 0;
+}
+
+static
+    int
+grid_n2_fin(void)
+{
+    free(GridN2.out);
+    free(GridN2.x);
+    free(GridN2.y);
+    return 0;
+}
+
+static
+    int
+grid_n2_apply(struct RemeshParam *p, long n, const double *x,
+              const double *y, const double *ksi, double **px, double **py,
+              double **pksi)
+{
+    int i;
+    int j;
+    int k;
+    int l;
+    int nx;
+    int ny;
+    real dx;
+    real dy;
+    real u;
+    real v;
+    real xhi;
+    real xlo;
+    real yhi;
+    real ylo;
+    struct Core *core;
+
+    nx = p->nx;
+    ny = p->ny;
+    xlo = p->xlo;
+    xhi = p->xhi;
+    ylo = p->ylo;
+    yhi = p->yhi;
+    core = p->core;
+    if (core->psi == NULL)
+        return 0;
+    dx = (xhi - xlo) / nx;
+    dy = (yhi - ylo) / ny;
+    l = 0;
+    for (j = 0; j < ny; j++) {
+        v = ylo + (j + 0.5) * dy;
+        for (i = 0; i < nx; i++) {
+            GridN2.out[l] = 0;
+            for (k = 0; k < n; k++) {
+                u = xlo + (i + 0.5) * dx;
+                GridN2.out[l] +=
+                    ksi[k] * core->psi(x[k] - u, y[k] - v, core->param);
+                GridN2.x[l] = u;
+                GridN2.y[l] = v;
+            }
+            l++;
+        }
+    }
+    *px = GridN2.x;
+    *py = GridN2.y;
+    *pksi = GridN2.out;
     return 0;
 }
