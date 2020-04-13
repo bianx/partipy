@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <barnes-hut.h>
+
 //#include "float/real.h"
 #include "double/real.h"
 
@@ -15,16 +18,15 @@ static void
 usg(void)
 {
     fprintf(stderr,
-            "%s -t time -m M -e every -d delta -c [chorin gauss hald j0 krasny] -s [euler rk4] -o [punto|skel|off|gnuplot] -g [punto|vtk] -x nx -y ny [> punto] < initial\n",
+            "%s -t time -m M -e every -d delta -c [chorin gauss hald j0 krasny] -s [euler rk4] -o [punto|skel|off|gnuplot] -a [n2|bh] -g [punto|vtk] -x nx -y ny [> punto] < initial\n",
             me);
-    exit(1);
+    exit(2);
 }
 
 struct Core;
-static int function(int n, const real *, real *, void *);
-static int particle(struct Core *, int n, const real * x, const real * y,
-                    const real * ksi, real * ksi0);
-
+static int algorithm_n2(int n, const real *, real *, void *);
+static int algorithm_bh(int n, const real *, real *, void *);
+static int particle(struct Core *, int n, const real * x, const real * y, const real * ksi, real * ksi0);
 static real gauss_psi(real, real, void *);
 static int gauss_dpsi(real, real, real *, real *, void *);
 static real gauss_coef(void *);
@@ -45,6 +47,8 @@ static int vtk_grid(void *, int, const real *, const real *,
                     const real *, int step);
 static int null_grid(void *, int, const real *, const real *,
                      const real *, int step);
+
+static real Theta;              /* Barnes-Hat parameter */
 
 struct Core {
     real(*psi) (real, real, void *);
@@ -149,12 +153,14 @@ static int (*const Grid[])(void *, int, const real *, const real *,
 int
 main(int argc, char **argv)
 {
-    (void) argc;
     char line[SIZE];
     const char *scheme;
+    int Aflag;
     int Dflag;
     int Eflag;
     int every;
+    int (*grid)(void *, int, const real *, const real *, const real *,
+                int);
     int i;
     int j;
     int m;
@@ -164,14 +170,12 @@ main(int argc, char **argv)
     int nremesh;
     int nx;
     int ny;
+    int (*remesh)(void *, int *, real *, real *, real *);
     int Sflag;
     int Tflag;
     int (*write)(int, const real *, const real *, const real *,
                  const real *, int);
-    int (*remesh)(void *, int *, real *, real *, real *);
-    int (*grid)(void *, int, const real *, const real *, const real *,
-                int);
-
+    int (*algorithm)(int, const real *, real *, void *);
     real *buf;
     real delta;
     real dt;
@@ -188,7 +192,9 @@ main(int argc, char **argv)
     struct PsiParam psi_param;
     struct RemeshParam remesh_param;
 
-    Eflag = Dflag = Mflag = Tflag = Sflag = 0;
+    (void) argc;
+
+    Aflag = Eflag = Dflag = Mflag = Tflag = Sflag = 0;
     write = NULL;
     core = NULL;
     scheme = NULL;
@@ -200,6 +206,31 @@ main(int argc, char **argv)
         switch (argv[0][1]) {
         case 'h':
             usg();
+            break;
+        case 'a':
+            argv++;
+            if (argv[0] == NULL) {
+                fprintf(stderr, "%s: -m needs an argument\n", me);
+                exit(2);
+            }
+            if (strncmp(argv[0], "n2", SIZE) == 0) {
+                algorithm = algorithm_n2;
+            } else if (strncmp(argv[0], "bh", SIZE) == 0) {
+                algorithm = algorithm_bh;
+                argv++;
+                if (argv[0] == NULL) {
+                    fprintf(stderr,
+                            "%s: barnes-hut algorithm needs an argument 'theta'\n",
+                            me);
+                    exit(2);
+                }
+                Theta = atof(argv[0]);
+            } else {
+                fprintf(stderr, "%s: unknown algorithm '%s'\n", me,
+                        argv[0]);
+                exit(2);
+            }
+            Aflag = 1;
             break;
         case 'm':
             argv++;
@@ -328,6 +359,10 @@ main(int argc, char **argv)
             fprintf(stderr, "%s: unknown option '%s'\n", me, argv[0]);
             exit(2);
         }
+    if (Aflag == 0) {
+        fprintf(stderr, "%s: -a is not given\n", me);
+        exit(2);
+    }
     if (Mflag == 0) {
         fprintf(stderr, "%s: -m is not given\n", me);
         exit(2);
@@ -420,7 +455,7 @@ main(int argc, char **argv)
     param.core = core;
     param.ksi = ksi;
     dt = t1 / (m - 1);
-    ode_param.function = function;
+    ode_param.function = algorithm;
     ode_param.param = &param;
     ode_param.dt = dt;
     ode_param.scheme = scheme;
@@ -475,7 +510,7 @@ main(int argc, char **argv)
 }
 
 static int
-function(int n, const real * z, real * f, void *params0)
+algorithm_n2(int n, const real * z, real * f, void *params0)
 {
     const real *ksi;
     const real *x;
@@ -515,6 +550,70 @@ function(int n, const real * z, real * f, void *params0)
         fx[i] *= coef;
         fy[i] *= coef;
     }
+    return 0;
+}
+
+static int
+algorithm_bh(int n, const real * z, real * f, void *params0)
+{
+    const real *ksi;
+    const real *x;
+    const real *y;
+    real dx;
+    real dy;
+    real *fx;
+    real *fy;
+    real gx;
+    real gy;
+    real coef;
+    int i;
+    int j;
+    struct Param *params;
+    struct Core *core;
+    struct BarnesHut *barnes_hut;
+
+    double x0[200 * 200];
+    double y0[200 * 200];
+    double ksi0[200 * 200];
+    double theta;
+    long cnt;
+
+    params = params0;
+    core = params->core;
+    ksi = params->ksi;
+    coef = core->coef(core->param);
+    x = z;
+    y = &z[n];
+    fx = f;
+    fy = &f[n];
+
+    if ((barnes_hut = barnes_hut_build(n, x, y, ksi)) == NULL) {
+        fprintf(stderr, "%s: barnes_hut_build failed\n", me);
+        return 1;
+    }
+    for (i = 0; i < n; i++)
+        fx[i] = fy[i] = 0;
+    for (i = 0; i < n; i++) {
+        if (barnes_hut_interaction
+            (barnes_hut, Theta, i, x[i], y[i], &cnt, x0, y0, ksi0) != 0) {
+            fprintf(stderr, "%s: barnes_hut_interaction failed\n", me);
+            return 1;
+        }
+        //fprintf(stderr, "cnt: %ld %ld\n", cnt, n);
+        for (j = 0; j < cnt; j++) {
+            dx = x[i] - x0[j];
+            dy = y[i] - y0[j];
+            core->dpsi(dx, dy, &gx, &gy, core->param);
+            fx[i] -= ksi0[j] * gy;
+            fy[i] += ksi0[j] * gx;
+        }
+    }
+    for (i = 0; i < n; i++) {
+        fx[i] *= coef;
+        fy[i] *= coef;
+    }
+
+    barnes_hut_fin(barnes_hut);
     return 0;
 }
 
