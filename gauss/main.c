@@ -57,6 +57,11 @@ static int grid_n2_fin(void);
 static int grid_n2_apply(struct RemeshParam *p, long n, const double *x,
                          const double *y, const double *ksi, double **px,
                          double **py, double **pksi);
+static int grid_bh_ini(struct RemeshParam *remesh_param);
+static int grid_bh_fin(void);
+static int grid_bh_apply(struct RemeshParam *p, long n, const double *x,
+                         const double *y, const double *ksi, double **px,
+                         double **py, double **pksi);
 
 static real Theta;              /* Barnes-Hat parameter */
 
@@ -71,7 +76,9 @@ struct GridBH {
     double *out;
     double *x;
     double *y;
-    double *ksi;
+    double *x0;
+    double *y0;
+    double *ksi0;
 } GridBH;
 
 struct Grid {
@@ -84,6 +91,7 @@ struct Grid {
 
 static struct Grid GridAlg[] = {
     { grid_n2_ini, grid_n2_fin, grid_n2_apply },
+    { grid_bh_ini, grid_bh_fin, grid_bh_apply },
 };
 
 struct Core {
@@ -230,6 +238,7 @@ main(int argc, char **argv)
     struct Param param;
     struct PsiParam psi_param;
     struct RemeshParam remesh_param;
+    struct Grid *grid_alg;
 
     (void) argc;
 
@@ -255,6 +264,7 @@ main(int argc, char **argv)
                 algorithm = algorithm_n2;
                 particle = particle_n2;
                 remesh = remesh_m4_n2;
+                grid_alg = &GridAlg[0];
             } else if (strncmp(argv[0], "bh", SIZE) == 0) {
                 argv++;
                 if (argv[0] == NULL) {
@@ -267,6 +277,7 @@ main(int argc, char **argv)
                 algorithm = algorithm_bh;
                 particle = particle_bh;
                 remesh = remesh_m4_bh;
+                grid_alg = &GridAlg[1];
             } else {
                 fprintf(stderr, "%s: unknown algorithm '%s'\n", me,
                         argv[0]);
@@ -524,7 +535,7 @@ main(int argc, char **argv)
                 fprintf(stderr, "%s: write failed\n", me);
                 exit(2);
             }
-            grid(&GridAlg[0], &remesh_param, n, x, y, ksi, i);
+            grid(grid_alg, &remesh_param, n, x, y, ksi, i);
         }
         if (i == m)
             break;
@@ -1794,8 +1805,7 @@ vtk_grid(struct Grid *grid, void *p0, int n, const real * x,
     return 0;
 }
 
-static
-    int
+static int
 grid_n2_ini(struct RemeshParam *remesh_param)
 {
     long n;
@@ -1816,8 +1826,7 @@ grid_n2_ini(struct RemeshParam *remesh_param)
     return 0;
 }
 
-static
-    int
+static int
 grid_n2_fin(void)
 {
     free(GridN2.out);
@@ -1826,8 +1835,7 @@ grid_n2_fin(void)
     return 0;
 }
 
-static
-    int
+static int
 grid_n2_apply(struct RemeshParam *p, long n, const double *x,
               const double *y, const double *ksi, double **px, double **py,
               double **pksi)
@@ -1877,5 +1885,118 @@ grid_n2_apply(struct RemeshParam *p, long n, const double *x,
     *px = GridN2.x;
     *py = GridN2.y;
     *pksi = GridN2.out;
+    return 0;
+}
+
+static int
+grid_bh_ini(struct RemeshParam *remesh_param)
+{
+    long n;
+
+    n = remesh_param->nx * remesh_param->ny;
+    if ((GridBH.out = malloc(n * sizeof(*GridBH.out))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
+    if ((GridBH.y = malloc(n * sizeof(*GridBH.y))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
+    if ((GridBH.x = malloc(n * sizeof(*GridBH.x))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
+    if ((GridBH.x0 = malloc(n * sizeof(*GridBH.x0))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
+    if ((GridBH.y0 = malloc(n * sizeof(*GridBH.y0))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
+    if ((GridBH.ksi0 = malloc(n * sizeof(*GridBH.ksi0))) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        exit(2);
+    }
+    return 0;
+}
+
+static int
+grid_bh_fin(void)
+{
+    free(GridBH.out);
+    free(GridBH.x);
+    free(GridBH.y);
+    free(GridBH.x0);
+    free(GridBH.y0);
+    free(GridBH.ksi0);
+    return 0;
+}
+
+static int
+grid_bh_apply(struct RemeshParam *p, long n, const double *x,
+              const double *y, const double *ksi, double **px, double **py,
+              double **pksi)
+{
+    int i;
+    int j;
+    int k;
+    int l;
+    int nx;
+    int ny;
+    real dx;
+    real dy;
+    real u;
+    real v;
+    real xhi;
+    real xlo;
+    real yhi;
+    real ylo;
+    long cnt;
+    struct Core *core;
+    struct BarnesHut *barnes_hut;
+
+    nx = p->nx;
+    ny = p->ny;
+    xlo = p->xlo;
+    xhi = p->xhi;
+    ylo = p->ylo;
+    yhi = p->yhi;
+    core = p->core;
+    if (core->psi == NULL)
+        return 0;
+    dx = (xhi - xlo) / nx;
+    dy = (yhi - ylo) / ny;
+
+    if ((barnes_hut = barnes_hut_build(n, x, y, ksi)) == NULL) {
+        fprintf(stderr, "%s: barnes_hut_build failed\n", me);
+        return 1;
+    }
+
+    l = 0;
+    for (j = 0; j < ny; j++) {
+        v = ylo + (j + 0.5) * dy;
+        for (i = 0; i < nx; i++) {
+            u = xlo + (i + 0.5) * dx;
+            GridBH.out[l] = 0;
+            if (barnes_hut_interaction
+                (barnes_hut, Theta, -1, u, v, &cnt, GridBH.x0, GridBH.y0, GridBH.ksi0) != 0) {
+                fprintf(stderr, "%s: barnes_hut_interaction failed\n", me);
+                return 1;
+            }
+            //fprintf(stderr, "cnt: %ld / %ld\n", cnt, n);
+            for (k = 0; k < cnt; k++) {
+                GridBH.out[l] +=
+                    GridBH.ksi0[k] * core->psi(GridBH.x0[k] - u, GridBH.y0[k] - v, core->param);
+                GridBH.x[l] = u;
+                GridBH.y[l] = v;
+            }
+            l++;
+        }
+    }
+    barnes_hut_fin(barnes_hut);
+    *px = GridBH.x;
+    *py = GridBH.y;
+    *pksi = GridBH.out;
     return 0;
 }
