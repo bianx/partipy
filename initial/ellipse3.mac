@@ -12,12 +12,11 @@ draw2d(implicit(vor(x, y) - 0.25, x, -1.5, 1.5, y, -1.5, 1.5),
   implicit(vor(x, y) - 19, x, -1.5, 1.5, y, -1.5, 1.5),
   implicit(vor(x, y) - 18, x, -1.5, 1.5, y, -1.5, 1.5));
 
-kill(a, b);
 x: a * r * cos(p);
 y: b * r * sin(p);
 dA: determinant(jacobian([x, y], ['r, 'p]));
-S: integrate(integrate(dA, r, 0, 1), p, 0, 2*%pi), numer;
+dA: trigsimp(dA);
 
-%pi * a * b, numer;
-
-integrate(dA*vor(r), r, 0, 1);
+key: 3;
+2 * %pi * a * b * quad_qag(dA * vor(r), r, 0, 1, key) [1], numer;
+/* integrate(dA*vor(r), r, 0, 1); */

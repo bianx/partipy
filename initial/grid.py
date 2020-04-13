@@ -23,14 +23,12 @@ def yavg(y, x, vorticity):
 
 def f(z, q):
     return math.exp(-(q/z)*math.exp(1/(z - 1)))
-
 def vorI(y, x, a, b):
     r = math.sqrt((x/a)**2 + (y/b)**2)
     if r < 1:
         return Ksi * (1 - f(r, q))
     else:
         return 0
-
 def vorII(y, x, a, b):
     r = math.sqrt((x/a)**2 + (y/b)**2)
     if r < 1:

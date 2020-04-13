@@ -4,6 +4,7 @@ import math
 import sys
 import scipy.special
 import scipy.optimize
+import scipy.integrate
 
 def usg():
     sys.stderr.write("""\
@@ -19,14 +20,33 @@ def s(t, a, b, k, n):
     c = arc(2*math.pi, a, b)
     return arc(t, a, b) - k * c / n
 
-def punto(x, y, lines):
+def punto(x, y, ksi, lines):
     m = len(x)
-    A = math.pi * a * b
-    dA = A / m
     for i in range(len(x)):
-        print("%.16e %.16e %.16e" % (x[i], y[i], ksi * dA))
+        print("%.16e %.16e %.16e" % (x[i], y[i], ksi[i]))
 
-def skel(x, y, lines):
+def f(z, q):
+    if z == 0:
+        return 0
+    else:
+        return math.exp(-(q/z)*math.exp(1/(z - 1)))
+def vorI(r):
+    if r < 1:
+        return Ksi * (1 - f(r, q))
+    else:
+        return 0
+def vorII(r):
+    if r < 1:
+        return Ksi * (1 - (r)**4)
+    else:
+        return 0
+def const(r):
+    if r < 1:
+        return Ksi
+    else:
+        return 0
+
+def skel(x, y, ksi, lines):
     nv = len(x)
     np = len(lines)
     print("SKEL")
@@ -42,7 +62,7 @@ def skel(x, y, lines):
         print(" %d" % line[0])
 
 me = "initial/ellipse.py"
-n = 8
+n = 20
 Write = { "punto" : punto, "skel" : skel }
 write = Write["punto"]
 while True:
@@ -70,37 +90,44 @@ while True:
     else:
         sys.stderr.write("%s: wrong option '%s'\n" % (me, sys.argv[0]))
         sys.exit(1)
-
-ksi = 10.61
+Ksi = 20
+q = 2.56085
 a = 1.6
 b = 0.8
 m0 = 4
-da = a/n
-db = b/n
 dr = 1/n
-x = []
-y = []
-
+epsabs = 0
+epsrel = 1e-3;
 
 j = 0
 lines = [ ]
+x = []
+y = []
+ksi = []
+
+fun = lambda r, p : r * vorI(r)
+ks, err = scipy.integrate.dblquad(fun, 0, 2*math.pi, 0, 1, (), epsabs, epsrel)
+sys.stderr.write("total: %g\n" % (ks * a * b));
+
 for i in range(n):
     rlo = dr * i
     rhi = dr * (i + 1)
-    
-    a0 = da * (i + 1/2)
-    b0 = db * (i + 1/2)
+    a0 = dr * (i + 1/2) * a
+    b0 = dr * (i + 1/2) * b
     m = m0 * (2 * i + 1)
     line = [ ]
     for k in range(m):
-        tlo = scipy.optimize.root_scalar(s, (b0, a0, k - 1/2, m), x0=0, x1=2*math.pi).root
-        thi = scipy.optimize.root_scalar(s, (b0, a0, k + 1/2, m), x0=0, x1=2*math.pi).root
-        t = scipy.optimize.root_scalar(s, (b0, a0, k, m), x0=0, x1=2*math.pi).root
-        sys.
+        tlo = scipy.optimize.root_scalar(s, (b0, a0, k, m), x0=0, x1=2*math.pi).root
+        thi = scipy.optimize.root_scalar(s, (b0, a0, k + 1, m), x0=0, x1=2*math.pi).root
+        # t = scipy.optimize.root_scalar(s, (b0, a0, k, m), x0=0, x1=2*math.pi).root
+        t = (tlo + thi)/2
+        fun = lambda r, p : r * vorI(r)
+        ks, err = scipy.integrate.dblquad(fun, tlo, thi, rlo, rhi, (), epsabs, epsrel)
         x.append(b0*math.sin(t))
         y.append(a0*math.cos(t))
+        ksi.append(a * b * ks)
         line.append(j)
         j += 1
     lines.append(line)
 
-write(x, y, lines)
+write(x, y, ksi, lines)

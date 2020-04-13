@@ -33,7 +33,7 @@ def ellipse(y, x, a, b):
     return 1 if (x/b)**2 + (y/a)**2 < 1 else 0
 
 d = 0.4
-Ksi = 10.61
+Ksi = 20
 a = 3
 b = 4
 n = 4
