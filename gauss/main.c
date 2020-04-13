@@ -1471,9 +1471,9 @@ particle_bh(struct Core *core, int n, const real * x, const real * y,
 {
     int i;
     int j;
-    real x0[100 * 100];
-    real y0[100 * 100];
-    real ksi00[100 * 100];
+    real *x0;
+    real *y0;
+    real *ksi00;
     real dx;
     real dy;
     real f;
@@ -1482,11 +1482,23 @@ particle_bh(struct Core *core, int n, const real * x, const real * y,
 
     if (core->psi == NULL)
         return 0;
+
+        if ((x0 = malloc(n * sizeof *x0)) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        return 1;
+    }
+    if ((y0 = malloc(n * sizeof *y0)) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        return 1;
+    }
+    if ((ksi00 = malloc(n * sizeof *ksi00)) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        return 1;
+    }
     if ((barnes_hut = barnes_hut_build(n, x, y, ksi)) == NULL) {
         fprintf(stderr, "%s: barnes_hut_build failed\n", me);
         return 1;
     }
-
     for (i = 0; i < n; i++) {
         ksi0[i] = 0;
         if (barnes_hut_interaction
@@ -1502,6 +1514,9 @@ particle_bh(struct Core *core, int n, const real * x, const real * y,
         }
     }
 
+    free(x0);
+    free(y0);
+    free(ksi00);
     barnes_hut_fin(barnes_hut);
     return 0;
 }
