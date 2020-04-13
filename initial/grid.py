@@ -69,8 +69,8 @@ elif shape == "circle":
 elif shape == "vorI":
     a = 0.8
     b = 2 * 0.8
-    nx = 20
-    ny = 40
+    nx = 40
+    ny = 80
     vorticity = lambda x, y : vorI(x, y, a, b)
     Ksi = 20
     q = 2.56085
@@ -88,8 +88,8 @@ else:
 
 xx = numpy.linspace(0, 1, nx + 1)
 yy = numpy.linspace(0, 1, ny + 1)
-xx **= 0.7
-yy **= 0.7
+#xx **= 0.7
+#yy **= 0.7
 xx *= a
 yy *= b
 
