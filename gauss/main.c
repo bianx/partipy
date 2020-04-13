@@ -1692,7 +1692,7 @@ punto_grid(void *p0, int n, const real * x, const real * y,
             for (i = 0; i < nx; i++) {
                 u = xlo + (i + 0.5) * dx;
                 ksi0[l] +=
-                    ksi[k] * gauss_psi(x[k] - u, y[k] - v, core->param);
+                    ksi[k] * core->psi(x[k] - u, y[k] - v, core->param);
                 l++;
             }
         }
@@ -1784,7 +1784,7 @@ vtk_grid(void *p0, int n, const real * x, const real * y, const real * ksi,
             for (i = 0; i < nx; i++) {
                 u = xlo + (i + 0.5) * dx;
                 ksi0[l] +=
-                    ksi[k] * gauss_psi(x[k] - u, y[k] - v, core->param);
+                    ksi[k] * core->psi(x[k] - u, y[k] - v, core->param);
                 l++;
             }
         }
