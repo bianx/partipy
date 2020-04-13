@@ -13,10 +13,8 @@
 
 Axisymetrization: Koumoutsakos, J. Comput. Phys. 1997
 
-   ./main -m 100 -s rk4 -t 12.0 -d 0.04 -e 1 -o punto -c chorin -a n2 < initial/vorI  > a
-
-   ./main -m 100 -s rk4 -t 1.0 -d 0.04 -e 1 -o punto -c chorin -a n2 < initial/vorI  > a
-
+   ./main -m 100 -s rk4 -t 12.0 -d 0.04 -e 1 -o punto -c chorin -a n2 -x 40 -y 40 < initial/vorI  > a
+   ./main -m 100 -s rk4 -t 1.0 -d 0.04 -e 1 -o punto -c chorin -a n2 -x 40 -y 40 < initial/vorI  > a
    ./main -r 20 -m 200 -s rk4 -t 10.0 -d 0.08 -e 1 -o punto -c chorin -a n2 < initial/vorI  > a
 
 punto -D 2 -c -G a

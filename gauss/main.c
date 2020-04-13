@@ -26,8 +26,10 @@ usg(void)
 struct Core;
 static int algorithm_n2(int n, const real *, real *, void *);
 static int algorithm_bh(int n, const real *, real *, void *);
-static int particle_n2(struct Core *, int n, const real * x, const real * y, const real * ksi, real * ksi0);
-static int particle_bh(struct Core *, int n, const real * x, const real * y, const real * ksi, real * ksi0);
+static int particle_n2(struct Core *, int n, const real * x,
+                       const real * y, const real * ksi, real * ksi0);
+static int particle_bh(struct Core *, int n, const real * x,
+                       const real * y, const real * ksi, real * ksi0);
 static real gauss_psi(real, real, void *);
 static int gauss_dpsi(real, real, real *, real *, void *);
 static real gauss_coef(void *);
@@ -177,7 +179,8 @@ main(int argc, char **argv)
     int (*write)(int, const real *, const real *, const real *,
                  const real *, int);
     int (*algorithm)(int, const real *, real *, void *);
-    int (*particle)(struct Core *, int, const real *, const real *, const real *, real *);
+    int (*particle)(struct Core *, int, const real *, const real *,
+                    const real *, real *);
     real *buf;
     real delta;
     real dt;
@@ -563,22 +566,22 @@ algorithm_bh(int n, const real * z, real * f, void *params0)
     const real *ksi;
     const real *x;
     const real *y;
+    real *ksi0;
+    real *x0;
+    real *y0;
+    int i;
+    int j;
+    long cnt;
+    real coef;
     real dx;
     real dy;
     real *fx;
     real *fy;
     real gx;
     real gy;
-    real coef;
-    int i;
-    int j;
-    struct Param *params;
-    struct Core *core;
     struct BarnesHut *barnes_hut;
-    double x0[200 * 200];
-    double y0[200 * 200];
-    double ksi0[200 * 200];
-    long cnt;
+    struct Core *core;
+    struct Param *params;
 
     params = params0;
     core = params->core;
@@ -589,6 +592,19 @@ algorithm_bh(int n, const real * z, real * f, void *params0)
     fx = f;
     fy = &f[n];
 
+
+    if ((x0 = malloc(n * sizeof *x0)) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        return 1;
+    }
+    if ((y0 = malloc(n * sizeof *y0)) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        return 1;
+    }
+    if ((ksi0 = malloc(n * sizeof *ksi0)) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        return 1;
+    }
     if ((barnes_hut = barnes_hut_build(n, x, y, ksi)) == NULL) {
         fprintf(stderr, "%s: barnes_hut_build failed\n", me);
         return 1;
@@ -615,6 +631,9 @@ algorithm_bh(int n, const real * z, real * f, void *params0)
         fy[i] *= coef;
     }
 
+    free(x0);
+    free(y0);
+    free(ksi0);
     barnes_hut_fin(barnes_hut);
     return 0;
 }
@@ -1452,9 +1471,9 @@ particle_bh(struct Core *core, int n, const real * x, const real * y,
 {
     int i;
     int j;
-    real x0[100*100];
-    real y0[100*100];
-    real ksi00[100*100];
+    real x0[100 * 100];
+    real y0[100 * 100];
+    real ksi00[100 * 100];
     real dx;
     real dy;
     real f;
@@ -1484,7 +1503,7 @@ particle_bh(struct Core *core, int n, const real * x, const real * y,
     }
 
     barnes_hut_fin(barnes_hut);
-    return 0;    
+    return 0;
 }
 
 static int
