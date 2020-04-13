@@ -31,7 +31,7 @@ N = len(x)
 p = x + 1j * y
 
 G = numpy.linspace(0, N - 1, N)
-g = numpy.linspace(0, N - 1, 100 * N)
+g = numpy.linspace(0, N - 1, 10 * N)
 p0 = triginterp(g, G, p)
 
 x0 = numpy.real(p0)

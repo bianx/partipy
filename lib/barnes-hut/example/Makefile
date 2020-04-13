@@ -8,7 +8,6 @@ M = \
 force\
 info\
 print\
-trace\
 
 all: $M
 .c.o:; $(CC) -c $(CFLAGS) $(M_CFLAGS) $<

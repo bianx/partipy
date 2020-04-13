@@ -62,7 +62,7 @@ def skel(x, y, ksi, lines):
         print(" %d" % line[0])
 
 me = "initial/ellipse.py"
-n = 20
+n = 8
 Write = { "punto" : punto, "skel" : skel }
 write = Write["punto"]
 while True:
@@ -105,8 +105,9 @@ x = []
 y = []
 ksi = []
 
-fun = lambda r, p : r * vorI(r)
-ks, err = scipy.integrate.dblquad(fun, 0, 2*math.pi, 0, 1, (), epsabs, epsrel)
+fun = lambda r : r * vorI(r)
+ks, err = scipy.integrate.quad(fun, 0, 1)
+ks *= 2 * math.pi
 sys.stderr.write("total: %g\n" % (ks * a * b));
 
 for i in range(n):
@@ -119,13 +120,18 @@ for i in range(n):
     for k in range(m):
         tlo = scipy.optimize.root_scalar(s, (b0, a0, k, m), x0=0, x1=2*math.pi).root
         thi = scipy.optimize.root_scalar(s, (b0, a0, k + 1, m), x0=0, x1=2*math.pi).root
-        # t = scipy.optimize.root_scalar(s, (b0, a0, k, m), x0=0, x1=2*math.pi).root
-        t = (tlo + thi)/2
-        fun = lambda r, p : r * vorI(r)
-        ks, err = scipy.integrate.dblquad(fun, tlo, thi, rlo, rhi, (), epsabs, epsrel)
-        x.append(b0*math.sin(t))
-        y.append(a0*math.cos(t))
-        ksi.append(a * b * ks)
+        
+        fun = lambda r : r * vorI(r)
+        fun_r = lambda r : r * r * vorI(r)
+        
+        r0, err = scipy.integrate.quad(fun_r, rlo, rhi)
+        p0 = (thi + tlo) / 2
+        ks, err = scipy.integrate.quad(fun, rlo, rhi)
+        r0 /= ks
+        
+        x.append(b * r0 * math.sin(p0))
+        y.append(a * r0 * math.cos(p0))
+        ksi.append((thi - tlo) * a * b * ks)
         line.append(j)
         j += 1
     lines.append(line)
