@@ -26,7 +26,8 @@ usg(void)
 struct Core;
 static int algorithm_n2(int n, const real *, real *, void *);
 static int algorithm_bh(int n, const real *, real *, void *);
-static int particle(struct Core *, int n, const real * x, const real * y, const real * ksi, real * ksi0);
+static int particle_n2(struct Core *, int n, const real * x, const real * y, const real * ksi, real * ksi0);
+static int particle_bh(struct Core *, int n, const real * x, const real * y, const real * ksi, real * ksi0);
 static real gauss_psi(real, real, void *);
 static int gauss_dpsi(real, real, real *, real *, void *);
 static real gauss_coef(void *);
@@ -176,6 +177,7 @@ main(int argc, char **argv)
     int (*write)(int, const real *, const real *, const real *,
                  const real *, int);
     int (*algorithm)(int, const real *, real *, void *);
+    int (*particle)(struct Core *, int, const real *, const real *, const real *, real *);
     real *buf;
     real delta;
     real dt;
@@ -215,8 +217,8 @@ main(int argc, char **argv)
             }
             if (strncmp(argv[0], "n2", SIZE) == 0) {
                 algorithm = algorithm_n2;
+                particle = particle_n2;
             } else if (strncmp(argv[0], "bh", SIZE) == 0) {
-                algorithm = algorithm_bh;
                 argv++;
                 if (argv[0] == NULL) {
                     fprintf(stderr,
@@ -225,6 +227,8 @@ main(int argc, char **argv)
                     exit(2);
                 }
                 Theta = atof(argv[0]);
+                algorithm = algorithm_bh;
+                particle = particle_bh;
             } else {
                 fprintf(stderr, "%s: unknown algorithm '%s'\n", me,
                         argv[0]);
@@ -571,11 +575,9 @@ algorithm_bh(int n, const real * z, real * f, void *params0)
     struct Param *params;
     struct Core *core;
     struct BarnesHut *barnes_hut;
-
     double x0[200 * 200];
     double y0[200 * 200];
     double ksi0[200 * 200];
-    double theta;
     long cnt;
 
     params = params0;
@@ -1426,8 +1428,8 @@ remesh_psi(void *p0, int *pn, real * x, real * y, real * ksi)
 }
 
 static int
-particle(struct Core *core, int n, const real * x, const real * y,
-         const real * ksi, real * ksi0)
+particle_n2(struct Core *core, int n, const real * x, const real * y,
+            const real * ksi, real * ksi0)
 {
     int i;
     int j;
@@ -1444,6 +1446,46 @@ particle(struct Core *core, int n, const real * x, const real * y,
     return 0;
 }
 
+static int
+particle_bh(struct Core *core, int n, const real * x, const real * y,
+            const real * ksi, real * ksi0)
+{
+    int i;
+    int j;
+    real x0[100*100];
+    real y0[100*100];
+    real ksi00[100*100];
+    real dx;
+    real dy;
+    real f;
+    struct BarnesHut *barnes_hut;
+    long cnt;
+
+    if (core->psi == NULL)
+        return 0;
+    if ((barnes_hut = barnes_hut_build(n, x, y, ksi)) == NULL) {
+        fprintf(stderr, "%s: barnes_hut_build failed\n", me);
+        return 1;
+    }
+
+    for (i = 0; i < n; i++) {
+        ksi0[i] = 0;
+        if (barnes_hut_interaction
+            (barnes_hut, Theta, i, x[i], y[i], &cnt, x0, y0, ksi00) != 0) {
+            fprintf(stderr, "%s: barnes_hut_interaction failed\n", me);
+            return 1;
+        }
+        for (j = 0; j < cnt; j++) {
+            dx = x[i] - x0[j];
+            dy = y[i] - y0[j];
+            f = core->psi(dx, dy, core->param);
+            ksi0[i] += ksi00[j] * f;
+        }
+    }
+
+    barnes_hut_fin(barnes_hut);
+    return 0;    
+}
 
 static int
 punto_grid(void *p0, int n, const real * x, const real * y,

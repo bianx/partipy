@@ -30,7 +30,7 @@ static const double q = 2.56085;
 static const double Ksi = 20.0;
 static const double a = 0.8;
 static const double b = 2 * 0.8;
-static const double delta = 0.3;
+static const double delta = 0.08;
 
 struct CrossParam {
     double xi;
@@ -121,7 +121,7 @@ main(int argc, char **argv)
 
     (void) argc;
 
-    gamma = 0.1;
+    gamma = 0;
     lin_param.vor = zero_param.vor = vorConst;
     lin_param.psi = cross_param.psi = gauss;
     Verbose = getenv("LOG") != NULL;

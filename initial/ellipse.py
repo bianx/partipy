@@ -7,7 +7,7 @@ import scipy.optimize
 
 def usg():
     sys.stderr.write("""\
-%s [-n int] [-s skel|punto] > file
+%s [-n int] [-o skel|punto] > file
 """ % me)
     sys.exit(2)
 

@@ -4,14 +4,13 @@
 include ../conf.mk
 
 M = \
-grid\
 ellipse\
 
 GSL_CFLAGS = `pkg-config --cflags gsl`
 GSL_LDFLAGS = `pkg-config --libs gsl`
 
-M_CFLAGS = -I../lib/vof
-M_LDFLAGS = -L../lib/vofi -L../lib/vof -lvof -lvofi -lm
+M_CFLAGS = 
+M_LDFLAGS = -lm
 
 all: $M
 .c.o:; $(CC) -c $(M_CFLAGS) $(GSL_CFLAGS) $(CFLAGS) $<
