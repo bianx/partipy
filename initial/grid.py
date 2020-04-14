@@ -21,6 +21,13 @@ def xavg(y, x, vorticity):
 def yavg(y, x, vorticity):
     return y * vorticity(y, x)
 
+def const(y, x, a, b):
+    r = math.sqrt((x/a)**2 + (y/b)**2)
+    if r < 1:
+        return Ksi
+    else:
+        return 0
+
 def f(z, q):
     return math.exp(-(q/z)*math.exp(1/(z - 1)))
 def vorI(y, x, a, b):
@@ -64,11 +71,19 @@ elif shape == "circle":
     nx = 5
     ny = 5
     vorticity = circle
+elif shape == "const":
+    a = 0.8
+    b = 2 * 0.8
+    nx = 20
+    ny = 40
+    vorticity = lambda x, y : const(x, y, a, b)
+    Ksi = 20
+    q = 2.56085
 elif shape == "vorI":
     a = 0.8
     b = 2 * 0.8
-    nx = 40
-    ny = 80
+    nx = 20
+    ny = 40
     vorticity = lambda x, y : vorI(x, y, a, b)
     Ksi = 20
     q = 2.56085

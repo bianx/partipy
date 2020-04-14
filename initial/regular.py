@@ -64,7 +64,9 @@ def skel(x, y, ksi, lines):
 me = "initial/ellipse.py"
 n = 8
 Write = { "punto" : punto, "skel" : skel }
+Vorticity = { "const" : const, "vorI" : vorI, "vorII" : vorII }
 write = Write["punto"]
+vor = Vorticity["vorI"]
 while True:
     sys.argv.pop(0)
     if len(sys.argv) == 0 or len(sys.argv[0]) < 2 or sys.argv[0][0] != '-':
@@ -87,6 +89,16 @@ while True:
         else:
             sys.stderr.write("%s: unknown output type '%s'\n" % (me, sys.argv[0]))
             sys.exit(1)
+    elif sys.argv[0][1] == 'v':
+        sys.argv.pop(0)
+        if len(sys.argv) == 0:
+            sys.stderr.write("%s: -o needs an argument\n" % me)
+            sys.exit(1)
+        if sys.argv[0] in Vorticity:
+            vor = Vorticity[sys.argv[0]]
+        else:
+            sys.stderr.write("%s: unknown vorticity type '%s'\n" % (me, sys.argv[0]))
+            sys.exit(1)            
     else:
         sys.stderr.write("%s: wrong option '%s'\n" % (me, sys.argv[0]))
         sys.exit(1)
@@ -105,7 +117,7 @@ x = []
 y = []
 ksi = []
 
-fun = lambda r : r * vorI(r)
+fun = lambda r : r * vor(r)
 ks, err = scipy.integrate.quad(fun, 0, 1)
 ks *= 2 * math.pi
 sys.stderr.write("total: %g\n" % (ks * a * b));
@@ -121,8 +133,8 @@ for i in range(n):
         tlo = scipy.optimize.root_scalar(s, (b0, a0, k, m), x0=0, x1=2*math.pi).root
         thi = scipy.optimize.root_scalar(s, (b0, a0, k + 1, m), x0=0, x1=2*math.pi).root
         
-        fun = lambda r : r * vorI(r)
-        fun_r = lambda r : r * r * vorI(r)
+        fun = lambda r : r * vor(r)
+        fun_r = lambda r : r * r * vor(r)
         
         r0, err = scipy.integrate.quad(fun_r, rlo, rhi)
         p0 = (thi + tlo) / 2
