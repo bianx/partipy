@@ -1,6 +1,6 @@
 #include "navier-stokes/centered.h"
 
-#define MAXLEVEL (7)
+#define MAXLEVEL (8)
 
 uf.n[left]   = 0.;
 uf.n[right]  = 0.;
@@ -68,20 +68,6 @@ event logfile (t <= 24; t += 1) {
     fprintf (ferr, "%g %d %g %g %g %d\n", t, i, dt, s.sum, s.max, mgp.i);
 }
 
-event movie (t += 0.5; t <= 24) {
-    scalar omega[];
-    vorticity (u, omega);
-    output_ppm (omega, linear = true, file = "vort.mp4");
-
-    foreach()
-        omega[] = level;
-    output_ppm (omega, spread = 2, file = "level.mp4");
-
-    foreach()
-        omega[] = pid();
-    output_ppm (omega, min = 0, max = npe() - 1, file = "pid.mp4");
-}
-
 event output (t += 0.5) {
     static int nf = 0;
     scalar omega[];
@@ -93,18 +79,12 @@ event output (t += 0.5) {
     output_field ({omega}, fp, linear = true);
     fclose (fp);
 
-    scalar l = omega;
-    foreach()
-        l[] = level;
-    sprintf (name, "level-%03d", nf);
-    fp = fopen (name, "w");
-    output_field ({l}, fp);
-    fclose (fp);
     nf++;
 }
 
+/*
 #if TREE
 event adapt (i++) {
     adapt_wavelet ((scalar *){u}, (double[]){5e-5,5e-5}, MAXLEVEL);
 }
-#endif
+#endif */

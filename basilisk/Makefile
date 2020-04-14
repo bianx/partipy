@@ -4,12 +4,12 @@
 CC99 = mpicc
 
 M = vortex
-M_LDFLAGS = -lm
+Q_FLAGS = -lm -O3
 
 all: $M
 .c:
 	. ba.setenv && \
-	CC99="$(CC99)" qcc $(CFLAGS) $(LDFLAGS) $(M_LDFLAGS) $< -o $@
+	CC99="$(CC99)" qcc $(CFLAGS) $(LDFLAGS) $(Q_FLAGS) $< -o $@
 
 run: all
 	./vortex
