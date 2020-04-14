@@ -11,7 +11,8 @@ all: $M
 	. ba.setenv && \
 	CC99="$(CC99)" qcc $(CFLAGS) $(LDFLAGS) $(M_LDFLAGS) $< -o $@
 
-run:; ./vortex
+run: all
+	./vortex
 clean:; rm -f $M
 
 
