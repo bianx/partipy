@@ -1,7 +1,7 @@
 #include "view.h"
 #include "navier-stokes/centered.h"
 
-#define MAXLEVEL (7)
+#define MAXLEVEL (9)
 
 uf.n[left]   = 0.;
 uf.n[right]  = 0.;
@@ -36,6 +36,21 @@ vorI(double x, double y)
     return r < 1 ? Ksi * (1 - f(r, q)) : 0;
 }
 
+static double
+vorII(double x, double y)
+{
+    double a;
+    double b;
+    double Ksi;
+    double r2;
+
+    a = 0.8;
+    b = 1.6;
+    Ksi = 20;
+    r2 = sq(x/a) + sq(y/b);
+    return r2 < 1 ? 0 : Ksi * (1 - r2*r2);
+}
+
 int main()
 {
     origin (-2, -2);
@@ -54,7 +69,7 @@ event init (t = 0)
     psi[bottom] = dirichlet(0);
 
     foreach() {
-        omega[] = vorI(x, y);
+        omega[] = vorII(x, y);
         psi[] = 0.;
     }
     boundary ({psi,omega});

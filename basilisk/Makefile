@@ -5,7 +5,7 @@ CC99 = mpicc
 CFLAGS = -Ofast -g
 
 M = vortex
-Q_FLAGS = -L$(BASILISK)/gl -lglutils -lfb_glx -lGLU -lGLEW -lGL -lX11 -lm -O3
+Q_FLAGS = -L$(BASILISK)/gl -lglutils -lfb_glx -lGLU -lGLEW -lGL -lX11 -lm
 
 all: $M
 .c:
