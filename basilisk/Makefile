@@ -4,7 +4,10 @@
 CC99 = mpicc
 CFLAGS = -Ofast -g
 
-M = vortex
+M = \
+vortex\
+wall\
+
 Q_FLAGS = -L$(BASILISK)/gl -lglutils -lfb_glx -lGLU -lGLEW -lGL -lX11 -lm
 
 all: $M
