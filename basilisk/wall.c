@@ -62,10 +62,12 @@ event output (t += 0.5)
     output_field ({omega}, f, linear = true);
     fclose(f);
 
-    view(width = 1200, height = 1200);
+    view(width = 1200, height = 600, fov = 6);
     clear();
-    for (i = 0; i < sizeof contours/sizeof *contours; i++)
+    for (i = 0; i < sizeof contours/sizeof *contours; i++) {
+        isoline ("omega", -contours[i], lw = 2);
         isoline ("omega", contours[i], lw = 2);
+    }
     snprintf (name, SIZE, "%03d.png", nf);
     save(name);
     nf++;

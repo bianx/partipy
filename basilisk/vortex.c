@@ -2,16 +2,13 @@
 #include "navier-stokes/centered.h"
 
 #define MAXLEVEL (6)
-
+static const char *me = "vertex";
 uf.n[left]   = 0.;
 uf.n[right]  = 0.;
 uf.n[top]    = 0.;
 uf.n[bottom] = 0.;
-
-static const char *me = "vertex";
 static double contours[] = {0.25, 0.50, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 static const double (*vor)(double, double);
-
 static double
 f(double z, double q)
 {
@@ -49,12 +46,12 @@ vorII(double x, double y)
     b = 1.6;
     Ksi = 20;
     r2 = sq(x/a) + sq(y/b);
-    return r2 < 1 ? Ksi * (1 - r2 * r2) : 0;
+    return r2 <= 1 ? Ksi * (1 - r2 * r2) : 0;
 }
 
 int main()
 {
-    vor = vorII;
+    vor = vorI;
     origin (-2, -2);
     size(8);
     init_grid (1 << MAXLEVEL);
