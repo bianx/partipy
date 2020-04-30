@@ -38,9 +38,11 @@ int main(int argc, char **argv)
             break;
         case '1':
             vor = vorI;
+            Vflag = 1;
             break;
         case '2':
             vor = vorII;
+            Vflag = 1;
             break;
         default:
             fprintf(stderr, "%s: unknown option '%s'\n", me, argv[0]);
