@@ -82,16 +82,16 @@ elif shape == "const":
 elif shape == "vorI":
     a = 0.8
     b = 2 * 0.8
-    nx = 20
-    ny = 40
+    nx = 10
+    ny = 20
     vorticity = lambda x, y : vorI(x, y, a, b)
     Ksi = 20
     q = 2.56085
 elif shape == "vorII":
     a = 0.8
     b = 2 * 0.8
-    nx = 20
-    ny = 40
+    nx = 10
+    ny = 20
     vorticity = lambda x, y : vorII(x, y, a, b)
     Ksi = 20
     q = 2.56085    

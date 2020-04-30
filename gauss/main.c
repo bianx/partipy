@@ -45,6 +45,9 @@ static int krasny_dpsi(real, real, real *, real *, void *);
 static real krasny_coef(void *);
 static int j0_dpsi(real, real, real *, real *, void *);
 static real j0_coef(void *);
+static real four_psi(real, real, void *);
+static int four_dpsi(real, real, real *, real *, void *);
+static real four_coef(void *);
 
 static int punto_grid(struct Grid *, void *, int, const real *,
                       const real *, const real *, int step);
@@ -107,6 +110,7 @@ static struct Core Core[] = {
     { hald_psi, hald_dpsi, hald_coef, NULL },
     { NULL, j0_dpsi, j0_coef, NULL },
     { NULL, krasny_dpsi, krasny_coef, NULL },
+    { four_psi, four_dpsi, four_coef, NULL },
 };
 
 static const char *CoreName[] = {
@@ -115,6 +119,7 @@ static const char *CoreName[] = {
     "hald",
     "j0",
     "krasny",
+    "four",
 };
 
 static int punto_write(int n, const real *, const real *, const real *,
@@ -956,6 +961,51 @@ gauss_dpsi(real x, real y, real * u, real * v, void *p0)
     r2 = x * x + y * y;
     if (r2 > 10 * DBL_MIN) {
         coef = (1 - exp(-r2 / d2)) / r2;
+        *u = coef * x;
+        *v = coef * y;
+    } else {
+        *u = 0;
+        *v = 0;
+    }
+    return 0;
+}
+
+static real
+four_coef(void *p)
+{
+    (void) p;
+    return 1 / (2 * pi);
+}
+
+static real
+four_psi(real x, real y, void *p0)
+{
+    real d2;
+    real r2;
+    struct PsiParam *p;
+
+    p = p0;
+    d2 = p->delta * p->delta;
+    r2 = x * x + y * y;
+    return (2 - r2 / d2 / 2) * exp(-r2 / d2) / (3 * pi * d2 / 2);
+}
+
+
+static int
+four_dpsi(real x, real y, real * u, real * v, void *p0)
+{
+    real coef;
+    real d2;
+    real delta;
+    real r2;
+    struct PsiParam *p;
+
+    p = p0;
+    delta = p->delta;
+    d2 = delta * delta;
+    r2 = x * x + y * y;
+    if (r2 > 10 * DBL_MIN) {
+        coef = (1 + (r2 / d2 - 1) * exp(-r2 / d2)) / r2;
         *u = coef * x;
         *v = coef * y;
     } else {
@@ -1980,14 +2030,17 @@ grid_bh_apply(struct RemeshParam *p, long n, const double *x,
             u = xlo + (i + 0.5) * dx;
             GridBH.out[l] = 0;
             if (barnes_hut_interaction
-                (barnes_hut, Theta, -1, u, v, &cnt, GridBH.x0, GridBH.y0, GridBH.ksi0) != 0) {
+                (barnes_hut, Theta, -1, u, v, &cnt, GridBH.x0, GridBH.y0,
+                 GridBH.ksi0) != 0) {
                 fprintf(stderr, "%s: barnes_hut_interaction failed\n", me);
                 return 1;
             }
             //fprintf(stderr, "cnt: %ld / %ld\n", cnt, n);
             for (k = 0; k < cnt; k++) {
                 GridBH.out[l] +=
-                    GridBH.ksi0[k] * core->psi(GridBH.x0[k] - u, GridBH.y0[k] - v, core->param);
+                    GridBH.ksi0[k] * core->psi(GridBH.x0[k] - u,
+                                               GridBH.y0[k] - v,
+                                               core->param);
                 GridBH.x[l] = u;
                 GridBH.y[l] = v;
             }

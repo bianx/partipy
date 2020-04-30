@@ -1,0 +1,19 @@
+P(r):= (4 - 2*r^2) / d^2;
+Q(r):= 1 - r^2;
+
+assume(r > 0);
+X: integrate(r * P(r/d) * exp(-r^2/d^2), r, 0, r);
+Y: Q(r/d) * exp(-r^2/d^2) - Q(0);
+
+factor(X/Y);
+
+/* draw2d(explicit(P(r/d)*exp(-r^2/d^2), r, 0, 5)), d = 1; */
+
+psi0: exp(-r^2/d^2) / (%pi * d^2);
+psi1: (2 - r^2/d^2/2) * exp(-r^2/d^2) / (3 * %pi * d^2 / 2);
+
+2 * %pi * integrate('r * psi0, r, '0, inf);
+2 * %pi * integrate('r * psi1, r, '0, inf);
+
+
+draw2d(explicit(psi0, r, 0, 2), 'color = 'red, explicit(psi1, r, 0, 2)), d = 1;
