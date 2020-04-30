@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-import scipy.integrate
 import math
 import numpy
 
@@ -58,8 +57,8 @@ shape = sys.argv.pop(0)
 if shape == "ellipse":
     a = 1
     b = 2
-    nx = 5
-    ny = 10
+    nx = 10
+    ny = 20
     vorticity = lambda x, y : ellipse(x, y, a, b)
 elif shape == "cubic":
     nx = 20
@@ -103,8 +102,6 @@ else:
 
 xx = numpy.linspace(0, 1, nx + 1)
 yy = numpy.linspace(0, 1, ny + 1)
-#xx **= 0.7
-#yy **= 0.7
 xx *= a
 yy *= b
 
@@ -114,12 +111,10 @@ for i in range(nx):
         xh = xx[i + 1]
         yl = yy[j]
         yh = yy[j + 1]
-        ksi, err = scipy.integrate.dblquad(vorticity, xl, xh, yl, yh, (), epsabs, epsrel)
-        x, err = scipy.integrate.dblquad(xavg, xl, xh, yl, yh, (vorticity,), epsabs, epsrel)
-        y, err = scipy.integrate.dblquad(yavg, xl, xh, yl, yh, (vorticity,), epsabs, epsrel)
+        x = (xl + xh)/2
+        y = (yl + yh)/2
+        ksi = vorticity(y, x) * (xh - xl) * (yh - yl)
         if ksi > 0:
-            x /= ksi
-            y /= ksi
             print("%.16e %.16e %.16e" % (x, y, ksi))
             print("%.16e %.16e %.16e" % (x, -y, ksi))
             print("%.16e %.16e %.16e" % (-x, y, ksi))
