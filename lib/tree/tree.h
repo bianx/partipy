@@ -1,7 +1,9 @@
 struct Tree;
-
-struct Tree *tree_ini(double, double, double);
-struct Tree *tree_build(long, const double *, const double *, const double *);
+struct TreeParam {
+    long cap;
+};
+struct Tree *tree_ini(struct TreeParam, double, double, double);
+struct Tree *tree_build(struct TreeParam, long, const double *, const double *, const double *);
 
 int tree_fin(struct Tree *);
 int tree_insert(struct Tree *, double, double, double, long);

@@ -23,6 +23,7 @@ struct Tree {
     long cap;
     long cnt;
     struct Node **node;
+    struct TreeParam param;
 };
 
 struct InfoParam {
@@ -49,14 +50,19 @@ static int walk(struct Tree *, struct Node *,
                 void *);
 
 struct Tree *
-tree_ini(double x, double y, double w)
+tree_ini(const struct TreeParam param, double x, double y, double w)
 {
     struct Tree *q;
 
+    if (param.cap <= 0) {
+        fprintf(stderr, "%s:%d: param.cap <= 0\n", __FILE__, __LINE__);
+        return NULL;
+    }
     if ((q = malloc(sizeof(*q))) == NULL) {
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         return NULL;
     }
+    q->param = param;
     q->cap = 1;
     q->cnt = 0;
     if ((q->node = malloc(q->cap * sizeof *q->node)) == NULL) {
@@ -82,7 +88,7 @@ min(double a, double b)
 }
 
 struct Tree *
-tree_build(long n, const double *x, const double *y, const double *m)
+tree_build(struct TreeParam param, long n, const double *x, const double *y, const double *m)
 {
     double w;
     double xc;
@@ -105,13 +111,13 @@ tree_build(long n, const double *x, const double *y, const double *m)
         xl = min(xl, x[i]);
         xh = max(xh, x[i]);
         yl = min(yl, y[i]);
-        yh = max(yh, y[i]);        
+        yh = max(yh, y[i]);
     }
     w = max(xh - xl, yh - yl);
     xc = (xl + xh)/2;
     yc = (yl + yh)/2;
 
-    if ((q = tree_ini(xc, yc, w)) == NULL) {
+    if ((q = tree_ini(param, xc, yc, w)) == NULL) {
         fprintf(stderr, "%s:%d: tree_ini failed\n", __FILE__, __LINE__);
         return NULL;
     }
@@ -119,7 +125,7 @@ tree_build(long n, const double *x, const double *y, const double *m)
     for (i = 0; i < n; i++)
         if (tree_insert(q, x[i], y[i], m[i], i) != 0) {
             fprintf(stderr, "%s:%d: tree_insert failed\n", __FILE__, __LINE__);
-            return NULL;            
+            return NULL;
         }
     return q;
 }
