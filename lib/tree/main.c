@@ -43,6 +43,7 @@ static int info(struct Node *, int, void *);
 static int quadrant(struct Node *, double, double);
 static int box(struct Node *, int, double *, double *, double *);
 static struct Node *node_ini(struct Tree *);
+static int node_fin(struct Node *);
 static int insert(struct Tree *, struct Node *, double, double,
                   double, long);
 static int walk(struct Tree *, struct Node *,
@@ -136,7 +137,7 @@ tree_fin(struct Tree *q)
     long i;
 
     for (i = 0; i < q->cnt; i++)
-        free(q->node[i]);
+        node_fin(q->node[i]);
     free(q->node);
     free(q);
     return 0;
@@ -399,6 +400,15 @@ node_ini(struct Tree *q)
     no->elm[SE] = NULL;
     q->node[q->cnt++] = no;
     return no;
+}
+
+int
+node_fin(struct Node *q)
+{
+    //free(q->x);
+    //free(q->y);
+    free(q);
+    return 0;
 }
 
 static int
