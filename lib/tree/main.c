@@ -5,14 +5,19 @@
 enum { NE, NW, SW, SE };
 static const int Dir[] = { NE, NW, SW, SE };
 
-struct Node {
+struct Particle {
+    double x;
+    double y;
     double m;
-    double mx;
-    double my;
+    long id;
+};
+
+struct Node {
     double w;
     double x;
     double y;
-    long id;
+    struct Particle *particle;
+    long cnt;
     struct Node *elm[4];
 };
 
@@ -26,29 +31,17 @@ struct Tree {
     struct TreeParam param;
 };
 
-struct InfoParam {
-    struct TreeInfo *info;
-    long cnt;
-};
-
-struct Param {
-    double *x;
-    double *y;
-    double *m;
-    long cnt;
-};
-
-static int trace(struct Node *, int, void *);
-static int info(struct Node *, int, void *);
 static int quadrant(struct Node *, double, double);
 static int box(struct Node *, int, double *, double *, double *);
 static struct Node *node_ini(struct Tree *);
 static int node_fin(struct Node *);
-static int insert(struct Tree *, struct Node *, double, double,
-                  double, long);
+static int insert(struct Tree *, struct Node *, struct Particle *);
+static int leaf(struct Node *);
+static int insert(struct Tree *, struct Node *, struct Particle *);
+static int insert0(struct Tree *, struct Node *, struct Particle *);
 static int walk(struct Tree *, struct Node *,
-                int (*)(struct Tree *, struct Node *, void *),
-                void *);
+                int (*)(struct Tree *, struct Node *, void *), void *);
+static int print(struct Tree *, struct Node *, void *);
 
 struct Tree *
 tree_ini(const struct TreeParam param, double x, double y, double w)
@@ -89,7 +82,8 @@ min(double a, double b)
 }
 
 struct Tree *
-tree_build(struct TreeParam param, long n, const double *x, const double *y, const double *m)
+tree_build(struct TreeParam param, long n, const double *x,
+           const double *y, const double *m)
 {
     double w;
     double xc;
@@ -115,8 +109,8 @@ tree_build(struct TreeParam param, long n, const double *x, const double *y, con
         yh = max(yh, y[i]);
     }
     w = max(xh - xl, yh - yl);
-    xc = (xl + xh)/2;
-    yc = (yl + yh)/2;
+    xc = (xl + xh) / 2;
+    yc = (yl + yh) / 2;
 
     if ((q = tree_ini(param, xc, yc, w)) == NULL) {
         fprintf(stderr, "%s:%d: tree_ini failed\n", __FILE__, __LINE__);
@@ -125,7 +119,8 @@ tree_build(struct TreeParam param, long n, const double *x, const double *y, con
 
     for (i = 0; i < n; i++)
         if (tree_insert(q, x[i], y[i], m[i], i) != 0) {
-            fprintf(stderr, "%s:%d: tree_insert failed\n", __FILE__, __LINE__);
+            fprintf(stderr, "%s:%d: tree_insert failed\n", __FILE__,
+                    __LINE__);
             return NULL;
         }
     return q;
@@ -144,192 +139,25 @@ tree_fin(struct Tree *q)
 }
 
 int
-tree_insert(struct Tree *q, double x, double y, double m,
-                  long id)
+tree_insert(struct Tree *q, double x, double y, double m, long id)
 {
     struct Node *no;
+    struct Particle particle;
 
     if (q->cnt == 0) {
         if ((no = node_ini(q)) == NULL) {
             fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
             return 1;
         }
-        no->m = m;
-        no->mx = m * x;
-        no->my = m * y;
-        no->id = id;
         no->x = q->x;
         no->y = q->y;
         no->w = q->w;
-        no->elm[NE] = NULL;
-        no->elm[NW] = NULL;
-        no->elm[SW] = NULL;
-        no->elm[SE] = NULL;
-    } else {
-        insert(q, q->node[0], x, y, m, id);
     }
-    return 0;
-}
-
-static double
-sq(double x)
-{
-    return x * x;
-}
-
-static int
-force(struct Node *n, double theta, int (*fun)(struct Node *, int, void *),
-      long id, double x, double y, void *data)
-{
-    double r2;
-    double w2;
-    int i;
-    int j;
-    int Coarse;
-
-    r2 = sq(x - n->mx / n->m) + sq(y - n->my / n->m);
-    w2 = n->w * n->w;
-    Coarse = w2 < theta * theta * r2;
-    if (n->elm[NE] == NULL && n->elm[NW] == NULL && n->elm[SW] == NULL
-        && n->elm[SE] == NULL) {
-        if (id != n->id) {
-            if (fun(n, Coarse, data)) {
-                fprintf(stderr, "%s:%d: function() failed\n", __FILE__,
-                        __LINE__);
-                return 1;
-            }
-        }
-    } else {
-        if (Coarse) {
-            if (fun(n, Coarse, data)) {
-                fprintf(stderr, "%s:%d: function() failed\n", __FILE__,
-                        __LINE__);
-                return 1;
-            }
-        } else {
-            for (i = 0; i < (int) (sizeof Dir / sizeof *Dir); i++) {
-                j = Dir[i];
-                if (n->elm[j] != NULL) {
-                    if (force(n->elm[j], theta, fun, id, x, y, data)) {
-                        fprintf(stderr, "%s:%d: function() failed\n",
-                                __FILE__, __LINE__);
-                        return 1;
-                    }
-                }
-            }
-        }
-    }
-    return 0;
-}
-
-
-int
-tree_interaction(struct Tree *q, double theta,
-                       long id, double x, double y, long *cnt, double *px,
-                       double *py, double *m)
-{
-    struct Param param;
-
-    param.cnt = 0;
-    param.x = px;
-    param.y = py;
-    param.m = m;
-    if (q->cnt > 0) {
-        if (force(q->node[0], theta, trace, id, x, y, &param) != 0) {
-            fprintf(stderr, "%s:%d: force() failed\n", __FILE__, __LINE__);
-            return 1;
-        }
-    }
-    *cnt = param.cnt;
-    return 0;
-}
-
-int
-tree_info(struct Tree *q, double theta,
-                long id, double x, double y, long *cnt,
-                struct TreeInfo *info0)
-{
-    struct InfoParam param;
-
-    param.cnt = 0;
-    param.info = info0;
-    if (q->cnt > 0) {
-        if (force(q->node[0], theta, info, id, x, y, &param) != 0) {
-            fprintf(stderr, "%s:%d: force() failed\n", __FILE__, __LINE__);
-            return 1;
-        }
-    }
-    *cnt = param.cnt;
-    return 0;
-}
-
-static int
-info(struct Node *n, int coarse, void *p0)
-{
-    struct TreeInfo info;
-    struct InfoParam *p;
-
-    p = p0;
-    info.id = n->id;
-    info.m = n->m;
-    info.mx = n->mx;
-    info.my = n->my;
-    info.w = n->w;
-    info.x = n->x;
-    info.y = n->y;
-    info.Leaf = n->elm[NE] == NULL && n->elm[NW] == NULL
-        && n->elm[SW] == NULL && n->elm[SE] == NULL;
-    info.Coarse = coarse;
-    p->info[p->cnt++] = info;
-    return 0;
-}
-
-static int
-trace(struct Node *n, int coarse, void *p0)
-{
-    struct Param *p;
-    double m;
-
-    (void) coarse;
-    p = p0;
-    m = n->m;
-    p->x[p->cnt] = m != 0 ? n->mx / m : 0;
-    p->y[p->cnt] = m != 0 ? n->my / m : 0;
-    p->m[p->cnt] = m;
-    p->cnt++;
-    return 0;
-}
-
-static int
-print(struct Tree *q, struct Node *n, void *f0)
-{
-    FILE *f;
-    double xl;
-    double xh;
-    double yl;
-    double yh;
-
-    (void) q;
-    f = f0;
-    xl = n->x - n->w / 2;
-    xh = n->x + n->w / 2;
-    yl = n->y - n->w / 2;
-    yh = n->y + n->w / 2;
-    if (n->elm[NE] == NULL && n->elm[NW] == NULL
-        && n->elm[SW] == NULL && n->elm[SE] == NULL) {
-        if (fprintf(f, "%.16g %.16g\n", xl, yl) < 0)
-            return 1;
-        if (fprintf(f, "%.16g %.16g\n", xh, yl) < 0)
-            return 1;
-        if (fprintf(f, "%.16g %.16g\n", xh, yh) < 0)
-            return 1;
-        if (fprintf(f, "%.16g %.16g\n", xl, yh) < 0)
-            return 1;
-        if (fprintf(f, "%.16g %.16g\n", xl, yl) < 0)
-            return 1;
-        if (fprintf(f, "\n") < 0)
-            return 1;
-    }
+    particle.x = x;
+    particle.y = y;
+    particle.m = m;
+    particle.id = id;
+    insert(q, q->node[0], &particle);
     return 0;
 }
 
@@ -394,6 +222,12 @@ node_ini(struct Tree *q)
             return NULL;
         }
     }
+    if ((no->particle =
+         malloc(q->param.cap * sizeof *no->particle)) == NULL) {
+        fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
+        return NULL;
+    }
+    no->cnt = 0;
     no->elm[NE] = NULL;
     no->elm[NW] = NULL;
     no->elm[SW] = NULL;
@@ -402,62 +236,69 @@ node_ini(struct Tree *q)
     return no;
 }
 
-int
+static int
 node_fin(struct Node *q)
 {
-    //free(q->x);
-    //free(q->y);
+    free(q->particle);
     free(q);
     return 0;
 }
 
 static int
-insert(struct Tree *q, struct Node *root, double x, double y,
-       double m, long id)
+insert0(struct Tree *q, struct Node *root, struct Particle *particle)
 {
-    int i;
     struct Node *no;
-    double xc;
-    double yc;
+    int i;
 
-    if (root->elm[NE] == NULL && root->elm[NW] == NULL
-        && root->elm[SW] == NULL && root->elm[SE] == NULL) {
-        xc = root->m == 0 ? root->mx : root->mx / root->m;
-        yc = root->m == 0 ? root->my : root->my / root->m;
-        i = quadrant(root, xc, yc);
+    i = quadrant(root, particle->x, particle->y);
+    if (root->elm[i] == NULL) {
         if ((no = node_ini(q)) == NULL) {
             fprintf(stderr, "%s:%d: node_ini failed\n", __FILE__,
                     __LINE__);
             return 1;
         }
-        no->m = root->m;
-        no->mx = root->mx;
-        no->my = root->my;
-        no->id = root->id;
         box(root, i, &no->x, &no->y, &no->w);
         root->elm[i] = no;
-        insert(q, root, x, y, m, id);
-    } else {
-        i = quadrant(root, x, y);
-        if (root->elm[i] == NULL) {
-            if ((no = node_ini(q)) == NULL) {
-                fprintf(stderr, "%s:%d: node_ini failed\n", __FILE__,
+    }
+    return insert(q, root->elm[i], particle);
+}
+
+static int
+insert(struct Tree *q, struct Node *root, struct Particle *particle)
+{
+    long k;
+
+    if (leaf(root)) {
+        if (root->cnt < q->param.cap) {
+            root->particle[root->cnt] = *particle;
+            root->cnt++;
+        } else {
+            for (k = 0; k < root->cnt; k++) {
+                if (insert0(q, root, &root->particle[k]) != 0) {
+                    fprintf(stderr, "%s:%d: insert0 failed\n", __FILE__,
+                            __LINE__);
+                    return 1;
+                }
+            }
+            root->cnt = 0;
+            if (insert0(q, root, particle) != 0) {
+                fprintf(stderr, "%s:%d: insert0 failed\n", __FILE__,
                         __LINE__);
                 return 1;
             }
-            no->m = m;
-            no->mx = m * x;
-            no->my = m * y;
-            no->id = id;
-            box(root, i, &no->x, &no->y, &no->w);
-            root->elm[i] = no;
-        } else
-            insert(q, root->elm[i], x, y, m, id);
-        root->mx += m * x;
-        root->my += m * y;
-        root->m += m;
+        }
+    } else if (insert0(q, root, particle) != 0) {
+        fprintf(stderr, "%s:%d: insert0 failed\n", __FILE__, __LINE__);
+        return 1;
     }
     return 0;
+}
+
+static int
+leaf(struct Node *q)
+{
+    return q->elm[NE] == NULL && q->elm[NW] == NULL
+        && q->elm[SW] == NULL && q->elm[SE] == NULL;
 }
 
 static int
@@ -475,6 +316,39 @@ walk(struct Tree *q, struct Node *node,
             if (walk(q, node->elm[j], fun, data) != 0)
                 return 1;
         }
+    }
+    return 0;
+}
+
+static int
+print(struct Tree *q, struct Node *n, void *f0)
+{
+    FILE *f;
+    double xl;
+    double xh;
+    double yl;
+    double yh;
+
+    (void) q;
+    f = f0;
+    xl = n->x - n->w / 2;
+    xh = n->x + n->w / 2;
+    yl = n->y - n->w / 2;
+    yh = n->y + n->w / 2;
+    if (n->elm[NE] == NULL && n->elm[NW] == NULL
+        && n->elm[SW] == NULL && n->elm[SE] == NULL) {
+        if (fprintf(f, "%.16g %.16g\n", xl, yl) < 0)
+            return 1;
+        if (fprintf(f, "%.16g %.16g\n", xh, yl) < 0)
+            return 1;
+        if (fprintf(f, "%.16g %.16g\n", xh, yh) < 0)
+            return 1;
+        if (fprintf(f, "%.16g %.16g\n", xl, yh) < 0)
+            return 1;
+        if (fprintf(f, "%.16g %.16g\n", xl, yl) < 0)
+            return 1;
+        if (fprintf(f, "\n") < 0)
+            return 1;
     }
     return 0;
 }
