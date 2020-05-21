@@ -213,10 +213,7 @@ find_node(struct Node *q, double x, double y)
     int i;
 
     i = quadrant(q, x, y);
-    if (q->elm[i] == NULL) {
-        return q;
-    } else
-        return find_node(q->elm[i], x, y);
+    return q->elm[i] == NULL ? q : find_node(q->elm[i], x, y);
 }
 
 static int
