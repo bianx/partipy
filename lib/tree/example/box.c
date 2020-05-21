@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <tree.h>
 
-static const char *me = "tree/example/print";
+static const char *me = "tree/example/box";
 enum { SIZE = 999 };
 
 static void
 usg(void)
 {
-    fprintf(stderr, "%s -c num < points\n", me);
+    fprintf(stderr, "%s -c int -p float float < points\n", me);
     exit(1);
 }
 
@@ -16,17 +16,25 @@ int
 main(int argc, char **argv)
 {
     char line[SIZE];
-    double xc;
-    double yc;
-    double w;
-    double *x;
-    double *y;
     double mass;
+    double w;
+    double wc;
+    double *x;
+    double xc;
+    double xh;
+    double xl;
+    double xp;
+    double *y;
+    double yc;
+    double yh;
+    double yl;
+    double yp;
+    int Pflag;
     long cap;
-    long n;
     long i;
-    struct Tree *tree;
+    long n;
     struct TreeParam param;
+    struct Tree *tree;
 
     (void) argc;
 
@@ -35,6 +43,7 @@ main(int argc, char **argv)
     w = 2;
     mass = 1;
     param.cap = 0;
+    Pflag = 0;
 
     while (*++argv != NULL && argv[0][0] == '-')
         switch (argv[0][1]) {
@@ -49,6 +58,17 @@ main(int argc, char **argv)
             }
             param.cap = atoi(argv[0]);
             break;
+        case 'p':
+            argv++;
+            if (argv[0] == NULL || argv[1] == NULL) {
+                fprintf(stderr, "%s: not enough argumetns for -p\n", me);
+                exit(2);
+            }
+            xp = atof(argv[0]);
+            argv++;
+            yp = atof(argv[0]);
+            Pflag = 1;
+            break;
         default:
             fprintf(stderr, "%s: unknown option '%s'\n", me, argv[0]);
             exit(2);
@@ -56,6 +76,10 @@ main(int argc, char **argv)
 
     if (param.cap == 0) {
         fprintf(stderr, "%s: -c is not set\n", me);
+        exit(2);
+    }
+    if (Pflag == 0) {
+        fprintf(stderr, "%s: -p is not set\n", me);
         exit(2);
     }
 
@@ -68,11 +92,6 @@ main(int argc, char **argv)
         fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
         exit(1);
     }
-    if ((tree = tree_ini(param, xc, yc, w)) == NULL) {
-        fprintf(stderr, "%s:%d: tree_ini failed\n", __FILE__, __LINE__);
-        exit(1);
-    }
-
     n = 0;
     while (fgets(line, SIZE, stdin) != NULL) {
         if (n == cap) {
@@ -97,9 +116,27 @@ main(int argc, char **argv)
         n++;
     }
 
+    if ((tree = tree_ini(param, xc, yc, w)) == NULL) {
+        fprintf(stderr, "%s:%d: tree_ini failed\n", __FILE__, __LINE__);
+        exit(1);
+    }
+
     for (i = 0; i < n; i++)
         tree_insert(tree, x[i], y[i], mass, i);
-    tree_print(tree, stdout);
+    if (tree_box(tree, xp, yp, &xc, &yc, &wc) != 0) {
+        fprintf(stderr, "%s:%d: tree_box failed\n", __FILE__, __LINE__);
+        exit(1);
+    }
+
+    xl = xc - wc / 2;
+    xh = xc + wc / 2;
+    yl = yc - wc / 2;
+    yh = yc + wc / 2;
+    printf("%.16g %.16g\n", xl, yl);
+    printf("%.16g %.16g\n", xh, yl);
+    printf("%.16g %.16g\n", xh, yh);
+    printf("%.16g %.16g\n", xl, yh);
+    printf("%.16g %.16g\n", xl, yl);
 
     free(x);
     free(y);

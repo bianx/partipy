@@ -5,6 +5,7 @@ M_CFLAGS = -I..
 M_LDFLAGS = -L.. -ltree -lm
 
 M = \
+box\
 print\
 
 all: $M

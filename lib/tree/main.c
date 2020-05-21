@@ -42,6 +42,8 @@ static int insert0(struct Tree *, struct Node *, struct Particle *);
 static int walk(struct Tree *, struct Node *,
                 int (*)(struct Tree *, struct Node *, void *), void *);
 static int print(struct Tree *, struct Node *, void *);
+static struct Node *find_box(struct Node *, double, double, double *,
+                             double *, double *);
 
 struct Tree *
 tree_ini(const struct TreeParam param, double x, double y, double w)
@@ -168,6 +170,39 @@ tree_print(struct Tree *q, FILE * f)
         return walk(q, q->node[0], print, f);
     else
         return 0;
+}
+
+int
+tree_box(struct Tree *q, double x, double y, double *px, double *py,
+         double *pw)
+{
+    struct Node *no;
+
+    if (q->cnt == 0) {
+        *px = q->x;
+        *py = q->y;
+        *pw = q->w;
+        return 0;
+    } else {
+        no = find_box(q->node[0], x, y, px, py, pw);
+        *px = no->x;
+        *py = no->y;
+        *pw = no->w;
+        return 0;
+    }
+}
+
+struct Node *
+find_box(struct Node *q, double x, double y, double *px, double *py,
+         double *pw)
+{
+    int i;
+
+    i = quadrant(q, x, y);
+    if (q->elm[i] == NULL) {
+        return q;
+    } else
+        return find_box(q->elm[i], x, y, px, py, pw);
 }
 
 static int

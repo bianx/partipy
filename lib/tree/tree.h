@@ -5,11 +5,12 @@ struct TreeParam {
 struct Tree *tree_ini(struct TreeParam, double, double, double);
 struct Tree *tree_build(struct TreeParam, long, const double *,
                         const double *, const double *);
-
 int tree_fin(struct Tree *);
 int tree_insert(struct Tree *, double, double, double, long);
-
 int tree_print(struct Tree *, FILE *);
+int tree_box(struct Tree *, double, double, double *, double *, double *);
+
+/*
 int tree_interaction(struct Tree *q, double theta,
                      long id, double x, double y, long *cnt,
                      double *px, double *py, double *m);
@@ -27,3 +28,4 @@ struct TreeInfo {
 int tree_info(struct Tree *q, double theta,
               long id, double x, double y, long *cnt,
               struct TreeInfo *info);
+*/
