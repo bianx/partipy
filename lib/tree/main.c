@@ -16,9 +16,10 @@ struct Node {
     double w;
     double x;
     double y;
-    struct Particle *particle;
     long cnt;
     struct Node *elm[4];
+    struct Particle *particle;
+    struct Node *mother;
 };
 
 struct Tree {
@@ -151,6 +152,7 @@ tree_insert(struct Tree *q, double x, double y, double m, long id)
             fprintf(stderr, "%s:%d: malloc failed\n", __FILE__, __LINE__);
             return 1;
         }
+        no->mother = NULL;
         no->x = q->x;
         no->y = q->y;
         no->w = q->w;
@@ -292,6 +294,7 @@ insert0(struct Tree *q, struct Node *root, struct Particle *particle)
                     __LINE__);
             return 1;
         }
+        no->mother = root;
         box(root, i, &no->x, &no->y, &no->w);
         root->elm[i] = no;
     }
