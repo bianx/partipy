@@ -8,8 +8,10 @@ struct Tree *tree_build(struct TreeParam, long, const double *,
                         const double *, const double *);
 int tree_fin(struct Tree *);
 int tree_insert(struct Tree *, double, double, double, long);
-int tree_print(struct Tree *, FILE *);
 struct Node *tree_node(struct Tree *, double, double);
+int tree_neighbor(struct Tree *, struct Node *, struct Node ***);
+
+int tree_print(struct Tree *, FILE *);
 int node_print(struct Node *, FILE *);
 
 /*

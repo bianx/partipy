@@ -6,6 +6,7 @@ M_LDFLAGS = -L.. -ltree -lm
 
 M = \
 box\
+neighbor\
 print\
 
 all: $M

@@ -4,6 +4,12 @@
 
 enum { NE, NW, SW, SE };
 static const int Dir[] = { NE, NW, SW, SE };
+static const int NeDir[][4] = {
+    {NW, SW, NE, SE},
+    {SW, NW, SE, NE},
+    {NW, NE, SW, SE},
+    {NE, NW, SE, SW},
+};
 
 struct Particle {
     double x;
@@ -30,6 +36,7 @@ struct Tree {
     long cnt;
     struct Node **node;
     struct TreeParam param;
+    struct Node *neighbor[9];
 };
 
 static int quadrant(struct Node *, double, double);
@@ -44,6 +51,7 @@ static int walk(struct Tree *, struct Node *,
                 int (*)(struct Tree *, struct Node *, void *), void *);
 static int print(struct Tree *, struct Node *, void *);
 static struct Node *find_node(struct Node *, double, double);
+static struct Node* north(struct Node *, const int *);
 
 struct Tree *
 tree_ini(const struct TreeParam param, double x, double y, double w)
@@ -214,6 +222,54 @@ find_node(struct Node *q, double x, double y)
 
     i = quadrant(q, x, y);
     return q->elm[i] == NULL ? q : find_node(q->elm[i], x, y);
+}
+
+int
+tree_neighbor(struct Tree *q, struct Node *n, struct Node ***pneighbor)
+{
+    int i;
+    int j;
+    int m;
+    struct Node *node;
+    j = 0;
+    m = sizeof NeDir / sizeof *NeDir;
+    for (i = 0; i < m; i++) {
+        node = north(n, NeDir[i]);
+        if (node != NULL) {
+            q->neighbor[j++] = node;
+        }
+        else
+            fprintf(stderr, "%d: NULL\n", i);
+    }
+    q->neighbor[j++] = NULL;
+    *pneighbor = q->neighbor;
+    return 0;
+}
+
+static struct Node*
+north(struct Node *self, const int *dir)
+{
+    struct Node *node;
+    int A;
+    int B;
+    int a;
+    int b;
+
+    a = dir[0];
+    A = dir[1];
+    b = dir[2];
+    B = dir[3];
+
+    if (self->mother == NULL)
+        return NULL;
+    if (self->mother->elm[A] == self)
+        return self->mother->elm[a];
+    if (self->mother->elm[B] == self)
+        return self->mother->elm[b];
+    node = north(self->mother, dir);
+    if (node == NULL || leaf(node))
+        return node;
+    return self->mother->elm[a] == self ? node->elm[A] : node->elm[B];
 }
 
 static int
