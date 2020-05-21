@@ -35,6 +35,7 @@ main(int argc, char **argv)
     long n;
     struct TreeParam param;
     struct Tree *tree;
+    struct Node *node;
 
     (void) argc;
 
@@ -123,20 +124,15 @@ main(int argc, char **argv)
 
     for (i = 0; i < n; i++)
         tree_insert(tree, x[i], y[i], mass, i);
-    if (tree_box(tree, xp, yp, &xc, &yc, &wc) != 0) {
+
+    if ((node = tree_node(tree, xp, yp)) == NULL) {
         fprintf(stderr, "%s:%d: tree_box failed\n", __FILE__, __LINE__);
         exit(1);
     }
-
-    xl = xc - wc / 2;
-    xh = xc + wc / 2;
-    yl = yc - wc / 2;
-    yh = yc + wc / 2;
-    printf("%.16g %.16g\n", xl, yl);
-    printf("%.16g %.16g\n", xh, yl);
-    printf("%.16g %.16g\n", xh, yh);
-    printf("%.16g %.16g\n", xl, yh);
-    printf("%.16g %.16g\n", xl, yl);
+    if (node_print(node, stdout) != 0) {
+        fprintf(stderr, "%s:%d: node_print failed\n", __FILE__, __LINE__);
+        exit(1);
+    }
 
     free(x);
     free(y);

@@ -43,8 +43,7 @@ static int insert0(struct Tree *, struct Node *, struct Particle *);
 static int walk(struct Tree *, struct Node *,
                 int (*)(struct Tree *, struct Node *, void *), void *);
 static int print(struct Tree *, struct Node *, void *);
-static struct Node *find_box(struct Node *, double, double, double *,
-                             double *, double *);
+static struct Node *find_node(struct Node *, double, double);
 
 struct Tree *
 tree_ini(const struct TreeParam param, double x, double y, double w)
@@ -174,29 +173,42 @@ tree_print(struct Tree *q, FILE * f)
         return 0;
 }
 
-int
-tree_box(struct Tree *q, double x, double y, double *px, double *py,
-         double *pw)
+struct Node*
+tree_node(struct Tree *q, double x, double y)
 {
-    struct Node *no;
+    return q->cnt == 0 ? NULL : find_node(q->node[0], x, y);
+}
 
-    if (q->cnt == 0) {
-        *px = q->x;
-        *py = q->y;
-        *pw = q->w;
-        return 0;
-    } else {
-        no = find_box(q->node[0], x, y, px, py, pw);
-        *px = no->x;
-        *py = no->y;
-        *pw = no->w;
-        return 0;
-    }
+int
+node_print(struct Node *q, FILE *f)
+{
+    double xl;
+    double xh;
+    double yl;
+    double yh;
+    if (q == NULL)
+        return 1;
+    xl = q->x - q->w / 2;
+    xh = q->x + q->w / 2;
+    yl = q->y - q->w / 2;
+    yh = q->y + q->w / 2;
+    if (fprintf(f, "%.16g %.16g\n", xl, yl) < 0)
+        return 1;
+    if (fprintf(f, "%.16g %.16g\n", xh, yl) < 0)
+        return 1;
+    if (fprintf(f, "%.16g %.16g\n", xh, yh) < 0)
+        return 1;
+    if (fprintf(f, "%.16g %.16g\n", xl, yh) < 0)
+        return 1;
+    if (fprintf(f, "%.16g %.16g\n", xl, yl) < 0)
+        return 1;
+    if (fprintf(f, "\n") < 0)
+        return 1;
+    return 0;
 }
 
 struct Node *
-find_box(struct Node *q, double x, double y, double *px, double *py,
-         double *pw)
+find_node(struct Node *q, double x, double y)
 {
     int i;
 
@@ -204,7 +216,7 @@ find_box(struct Node *q, double x, double y, double *px, double *py,
     if (q->elm[i] == NULL) {
         return q;
     } else
-        return find_box(q->elm[i], x, y, px, py, pw);
+        return find_node(q->elm[i], x, y);
 }
 
 static int

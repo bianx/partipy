@@ -1,4 +1,5 @@
 struct Tree;
+struct Node;
 struct TreeParam {
     long cap;
 };
@@ -8,7 +9,8 @@ struct Tree *tree_build(struct TreeParam, long, const double *,
 int tree_fin(struct Tree *);
 int tree_insert(struct Tree *, double, double, double, long);
 int tree_print(struct Tree *, FILE *);
-int tree_box(struct Tree *, double, double, double *, double *, double *);
+struct Node *tree_node(struct Tree *, double, double);
+int node_print(struct Node *, FILE *);
 
 /*
 int tree_interaction(struct Tree *q, double theta,
