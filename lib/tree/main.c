@@ -2,13 +2,13 @@
 #include <stdio.h>
 #include "tree.h"
 
-enum { NE, NW, SW, SE };
-static const int Dir[] = { NE, NW, SW, SE };
+enum { RU, LU, LD, RD };
+static const int Dir[] = { RU, LU, LD, RD };
 static const int NeDir[][4] = {
-    {NW, SW, NE, SE},
-    {SW, NW, SE, NE},
-    {NW, NE, SW, SE},
-    {NE, NW, SE, SW},
+    {LU, LD, RU, RD},
+    {LD, LU, RD, RU},
+    {LU, RU, LD, RD},
+    {RU, LU, RD, LD},
 };
 
 struct Particle {
@@ -238,8 +238,6 @@ tree_neighbor(struct Tree *q, struct Node *n, struct Node ***pneighbor)
         if (node != NULL) {
             q->neighbor[j++] = node;
         }
-        else
-            fprintf(stderr, "%d: NULL\n", i);
     }
     q->neighbor[j++] = NULL;
     *pneighbor = q->neighbor;
@@ -275,7 +273,7 @@ north(struct Node *self, const int *dir)
 static int
 quadrant(struct Node *n, double x, double y)
 {
-    return (x > n->x) ? (y > n->y) ? NE : SE : (y > n->y) ? NW : SW;
+    return (x > n->x) ? (y > n->y) ? RU : RD : (y > n->y) ? LU : LD;
 }
 
 static int
@@ -288,19 +286,19 @@ box(struct Node *n, int i, double *px, double *py, double *pw)
     *pw = n->w / 2;
     l = n->w / 4;
     switch (i) {
-    case NE:
+    case RU:
         *px += l;
         *py += l;
         break;
-    case SE:
+    case RD:
         *px += l;
         *py -= l;
         break;
-    case NW:
+    case LU:
         *px -= l;
         *py += l;
         break;
-    case SW:
+    case LD:
         *px -= l;
         *py -= l;
         break;
@@ -330,10 +328,10 @@ node_ini(struct Tree *q)
         return NULL;
     }
     no->cnt = 0;
-    no->elm[NE] = NULL;
-    no->elm[NW] = NULL;
-    no->elm[SW] = NULL;
-    no->elm[SE] = NULL;
+    no->elm[RU] = NULL;
+    no->elm[LU] = NULL;
+    no->elm[LD] = NULL;
+    no->elm[RD] = NULL;
     q->node[q->cnt++] = no;
     return no;
 }
@@ -400,8 +398,8 @@ insert(struct Tree *q, struct Node *root, struct Particle *particle)
 static int
 leaf(struct Node *q)
 {
-    return q->elm[NE] == NULL && q->elm[NW] == NULL
-        && q->elm[SW] == NULL && q->elm[SE] == NULL;
+    return q->elm[RU] == NULL && q->elm[LU] == NULL
+        && q->elm[LD] == NULL && q->elm[RD] == NULL;
 }
 
 static int
@@ -438,8 +436,8 @@ print(struct Tree *q, struct Node *n, void *f0)
     xh = n->x + n->w / 2;
     yl = n->y - n->w / 2;
     yh = n->y + n->w / 2;
-    if (n->elm[NE] == NULL && n->elm[NW] == NULL
-        && n->elm[SW] == NULL && n->elm[SE] == NULL) {
+    if (n->elm[RU] == NULL && n->elm[LU] == NULL
+        && n->elm[LD] == NULL && n->elm[RD] == NULL) {
         if (fprintf(f, "%.16g %.16g\n", xl, yl) < 0)
             return 1;
         if (fprintf(f, "%.16g %.16g\n", xh, yl) < 0)
