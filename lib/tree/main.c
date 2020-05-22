@@ -3,7 +3,7 @@
 #include "tree.h"
 
 enum { RU, LU, LD, RD };
-static const int Dir[] = { RU, LU, LD, RD };
+static const int O[] = { RU, LU, LD, RD };
 static const int NeDir[][4] = {
     {LU, LD, RU, RD},
     {LD, LU, RD, RU},
@@ -412,8 +412,8 @@ walk(struct Tree *q, struct Node *node,
     if (node != NULL) {
         if (fun(q, node, data) != 0)
             return 1;
-        for (i = 0; i < (int) (sizeof Dir / sizeof *Dir); i++) {
-            j = Dir[i];
+        for (i = 0; i < (int) (sizeof O / sizeof *O); i++) {
+            j = O[i];
             if (walk(q, node->elm[j], fun, data) != 0)
                 return 1;
         }
