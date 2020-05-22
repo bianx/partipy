@@ -1,0 +1,10 @@
+      I (direction)   LDB   LDF        LUB         LUF          RDB       RDF   RUB   RUF
+
+           LDB         Q     LD         LB          B               DB     cl    cl    D
+           LDF        LD      n          D         LF                Q    DF     0     D
+           LUB        LB      i-l        cl        LU                cl    B    UB     s2
+           LUF         cl    LF         LU          cl               il    B     cl   UF
+           RDB        DB      cl         0          $2               Q    RD    RB     !a
+           RDF         n     DF          52         n               RD     Q     D    RF
+           RUB         B      51        UB          cl              RB     cl    Q    RU
+           RUF         52     a          n         UF                Q    RF    RU     B

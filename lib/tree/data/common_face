@@ -1,0 +1,22 @@
+      I (direction)   LDB   LDF        LUB         LUF          RDB       RDF   RUB   RUF
+
+            LD         cl     cl         L          L                D     D     sl    61
+            LU         L      L          D          cl               Q     c!    U     I1
+             LB        52     L          D          L                B     0     B     11
+             LF        L      D          L          cl               n     F     D     F
+            RD         D      D          1;         D                cl    n     R     R
+            RU         Cl     Q          U          U                R     R     Q     cl
+             RB        B      cl         B          D                cl    R     D     R
+             RF        a      F          Q          F                R     n     R     cl
+            DB         Q      D          B          Q                Q     D     B     $1
+            DF         D      n          n          F                D     cl    D      F
+            UB         B      cl         0          U                B     D     D     U
+            UF         n      F          U          cl               a     F     U     i1
+           LDB         D      cl         8          L                Q     D     B     62
+           LDF         a      D          L          I;2              D     Q     a     F
+           LUB         B      L          D          fl               B     .Q    D     U
+           LUF         L      n          cl         D                cl    F     U     $1
+           RDB         Q      D          B          Q                D     Q     D     R
+           RDF         D      D          cl         F                D     Q     R     bl
+           RUB         B      cl         D          U                cl    R     D     61
+           RUF         n      F          U          cl               R     D     11    D

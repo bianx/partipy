@@ -1,0 +1,28 @@
+      I (direction)   LDB    LDF       LUB         LUF        RDB      RDF   RUB   RUF
+
+               L      RDB    RDF       RUB         RUF        LDB      LDF   LUB   LUF
+              R       RDB    RDF       RUB         RUF        LDB      LDF   LUB   LUF
+              D       LUB    LUF       LDB         LDF        RUB      RUF   RDB   RDF
+              U       LUB    LUF       LDB         LDF        RUB      RUF   RDB   RDF
+               B      LDF    LDB       LUF         LUB        RDF      RDB   RUF   RUB
+               F      LDF    LDB       LUF         LUB        RDF      RDB   RUF   RUB
+            LD        RUB    RUF       RDB         RDF        LUB      LUF   LDB   LDF
+            LU        RUB    RUF       RDB         RDF        LUB      LUF   LDB   LDF
+             LB       RDF    RDB       RUF         RUB        LDF      LDB   LUF   LUB
+             LF       RDF    RDB       RUF         RUB        LDF      LDB   LUF   LUB
+            RD        RUB    RUF       RDB         RDF        LUB      LUF   LDB   LDF
+            RU        RUB    RUF       RDB         RDF        LUB      LUF   LDB   LDF
+            RB        RDF    RDB       RUF         RUB        LDF      LDB   LUF   LUB
+            RF        RDF    RDB       RUF         RUB        LDF      LDB   LUF   LUB
+            DB        LUF    LUB       LDF         LDB        RUF      RUB   RDF   RDB
+            DF        LUF    LUB       LDF         LDB        RUF      RUB   RDF   RDB
+            UB        LUF    LUB       LDF         LDB        RUF      RUB   RDF   RDB
+            UF        LUF    LUB       LDF         LDB        RUF      RUB   RDF   RDB
+           LDB        RUF    RUB       RDF         RDB        LUF      LUB   LDF   LDB
+           LDF        RUF    RUB       RDF         RDB        LUF      LUB   LDF   LDB
+           LUB        RUF    RUB       RDF         RDB        LUF      LUB   LDF   LDB
+           LUF        RUF    RUB       RDF         RDB        LUF      LUB   LDF   LDB
+           RDB        RUF    RUB       RDF         RDB        LUF      LUB   LDF   LDB
+           RDF        RUF    RUB       RDF         RDB        LUF      LUB   LDF   LDB
+           RUB        RUF    RUB       RDF         RDB        LUF      LUB   LDF   LDB
+           RUF        RUF    RUB       RDF         RDB        LUF      LUB   LDF   LDB

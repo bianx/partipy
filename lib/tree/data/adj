@@ -1,0 +1,28 @@
+      I (direction)   LDB    LDF     LUB         LUF         RDB     RDF   RUB   RUF
+
+               L       T      T       T            T             F    F     F
+               R       F      F       F            F             T    T     T
+               D       T      T       F            F             T    T     F
+               U       F      F       T            I             F    F     T
+               B       T      F       T            F             T    F     T
+               F       F      T       F            T             F    T     F
+            LD         T      T       F            F             F    F     F
+            LU         F      F       T            T             F    F     F
+             LB        T      F       T            F             F    F     F
+             LF        F      T       F            T             F    F     F
+            RD         F      F       F            F             T    T     F
+            RU         F      F       F            F             F    F     T
+            RB         F      F       F            F             T    F     T
+            RF         F      F       F            F             F    T     F
+            DB         T      F       F            F             T    F     F
+            DF         F      T       F            F             F    T     F
+            UB         F      F       T            F             F    F     T
+            UF         F      F       F            T             F    F     F
+           LDB         T      F       F            F             F    F     F
+           LDF         F      T       F            F             F    F     F
+           LUB         F      F       T            F             F    F     F
+           LUF         F      F       F            T             F    F     F
+           RDB         F      F       F            F             T    F     F
+           RDF         F      F       F            F             F    T     F
+           RUB         F      F       F            F             F    F     T
+           RUF         F      F       F            F             F    F     F
