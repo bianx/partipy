@@ -1,0 +1,24 @@
+#!/bin/sh
+
+awk '
+{
+    R["NE"] = "RU"
+    R["NW"] = "LU"
+    R["SW"] = "LD"
+    R["SE"] = "RD"
+    ans = ""
+    for (;;) {
+	if (match($0, /^[a-zA-Z_][a-zA-Z_0-9]*/)) {
+	    v  = substr($0, RSTART, RLENGTH)
+	    if (v in R)
+		v = R[v]
+	} else if (match($0, /^./)) {
+	    v  = substr($0, RSTART, RLENGTH)
+	} else
+	    break
+	$0 = substr($0, RSTART + RLENGTH)
+	ans = ans v
+    }
+    print ans
+}
+' "$@"
