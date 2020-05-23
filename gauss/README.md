@@ -7,6 +7,7 @@
 
     ./main -m 1000 -s rk4 -t 40 -d 0.02 -e 10 -o punto -c gauss  -a n2 < initial/circle > p
     ./main -m 1000 -s rk4 -t 40 -d 0.02 -e 10 -o punto -c chorin -a n2 < initial/circle > p
+    ./main -m 100 -s rk4 -t 4.0 -d 0.5 -e 10 -o gnuplot -c krasny -a n2 < initial/krasny
     
     punto -D 2 -c -G p
 

@@ -1,0 +1,26 @@
+#!/bin/sh
+
+awk '
+BEGIN {
+    i = 0
+}
+NF {
+    x[i] = $1
+    y[i] = $2
+    z[i] = $3
+    i++
+}
+
+END {
+    n = i
+    print "SKEL"
+    print n, 1
+    for (i = 0; i < n; i++)
+	print x[i], y[i], z[i]
+    printf "%d", n - 1
+    for (i = 0; i < n; i++)
+	printf " %d", i
+    printf "\n"
+}
+
+' "$@"
